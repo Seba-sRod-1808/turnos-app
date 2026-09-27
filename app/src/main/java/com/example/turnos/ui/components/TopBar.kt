@@ -59,11 +59,13 @@ fun TurnosScaffold(
     actionDescription: String? = null,
     onAction: () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
+    snackbarHostState: SnackbarHostState? = null,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
         topBar = { TurnosTopBar(title, onBack, actionIcon, actionDescription, onAction) },
         bottomBar = bottomBar,
+        snackbarHost = { snackbarHostState?.let { SnackbarHost(it) } },
         containerColor = ScreenBackground,
         content = content,
     )

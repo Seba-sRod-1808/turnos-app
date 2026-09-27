@@ -1,5 +1,7 @@
 package com.example.turnos.navigation
-object Routes {
+
+/** Destinos de navegación. Separados por rol: cliente y negocio (administrador). */
+object Destinations {
     const val LOGIN = "login"
 
     // Cliente

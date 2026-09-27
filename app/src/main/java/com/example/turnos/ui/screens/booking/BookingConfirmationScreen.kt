@@ -11,50 +11,76 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.turnos.data.mock.MockData
 import com.example.turnos.data.model.AppointmentStatus
+import com.example.turnos.data.model.Barber
+import com.example.turnos.data.model.Service
 import com.example.turnos.data.model.SlotState
+import com.example.turnos.data.model.TimeSlot
+import com.example.turnos.data.source.FakeDataSource
 import com.example.turnos.ui.components.*
 import com.example.turnos.ui.theme.*
 
-private val days = listOf("Lun 15", "Mar 16", "Mié 17", "Jue 18", "Vie 19", "Sáb 20")
+data class BookingUiState(
+    val service: Service? = null,
+    val barber: Barber? = null,
+    val businessName: String = "",
+    val businessAddress: String = "",
+    val days: List<String> = emptyList(),
+    val selectedDayIndex: Int = 0,
+    val slots: List<TimeSlot> = emptyList(),
+    val selectedSlot: String? = null,
+    val isConfirming: Boolean = false,
+    val isConfirmed: Boolean = false,
+    val errorMessage: String? = null,
+) {
+    val canConfirm: Boolean get() = selectedSlot != null && !isConfirming && !isConfirmed
+    val dateLabel: String
+        get() = if (selectedSlot != null && days.isNotEmpty()) "${days[selectedDayIndex]} de Junio, $selectedSlot"
+        else "Selecciona un horario"
+}
 
 @Composable
 fun BookingConfirmationScreen(
-    serviceId: String,
+    state: BookingUiState,
     onBack: () -> Unit,
+    onSelectDay: (Int) -> Unit,
+    onSelectSlot: (String) -> Unit,
+    onConfirm: () -> Unit,
     onViewAgenda: () -> Unit,
 ) {
-    val service = remember(serviceId) { MockData.services.firstOrNull { it.id == serviceId } ?: MockData.services.first() }
-    val barber = MockData.barbers.first()
-
-    var dayIndex by rememberSaveable { mutableIntStateOf(0) }
-    var slot by rememberSaveable { mutableStateOf<String?>(null) }
-    var confirmed by rememberSaveable { mutableStateOf(false) }
-
     TurnosScaffold(
         title = "Confirmación de Cita",
         onBack = onBack,
         bottomBar = {
             BottomActionBar {
-                if (confirmed) {
-                    PrimaryButton("VER CITA EN AGENDA", onClick = onViewAgenda)
-                } else {
-                    PrimaryButton("CONFIRMAR RESERVA", onClick = { confirmed = true }, enabled = slot != null)
+                when {
+                    state.isConfirmed -> PrimaryButton("VER CITA EN AGENDA", onClick = onViewAgenda)
+                    state.isConfirming -> Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = TurnosOrange, modifier = Modifier.size(28.dp))
+                    }
+                    else -> PrimaryButton("CONFIRMAR RESERVA", onClick = onConfirm, enabled = state.canConfirm)
                 }
             }
         },
     ) { padding ->
+        val service = state.service
+        val barber = state.barber
+        if (service == null || barber == null) {
+            LoadingContent(Modifier.padding(padding))
+            return@TurnosScaffold
+        }
+        val editable = !state.isConfirmed && !state.isConfirming
+
         Column(
             Modifier
                 .padding(padding)
@@ -63,6 +89,14 @@ fun BookingConfirmationScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            if (state.errorMessage != null) {
+                InfoBanner(
+                    state.errorMessage,
+                    icon = Icons.Outlined.ErrorOutline,
+                    fg = DangerRed, bg = DangerSoft, border = DangerRed.copy(alpha = 0.4f),
+                )
+            }
+
             // ---------- Sumario ----------
             TurnosCard {
                 Text("Sumario", style = MaterialTheme.typography.titleSmall, color = Ink)
@@ -81,24 +115,24 @@ fun BookingConfirmationScreen(
                 Spacer(Modifier.height(12.dp))
                 LabelValue("Servicio", service.name)
                 LabelValue("Duración", "${service.durationMin} min")
-                LabelValue("Fecha", if (slot != null) "${days[dayIndex]} de Junio, $slot" else "Selecciona un horario")
+                LabelValue("Fecha", state.dateLabel)
             }
 
-            // ---------- Fecha y hora (reserva autónoma) ----------
+            // ---------- Fecha y hora ----------
             TurnosCard {
                 Text("Fecha y hora", style = MaterialTheme.typography.titleSmall, color = Ink)
                 Spacer(Modifier.height(12.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    itemsIndexed(days) { i, d ->
-                        SelectChip(d, selected = i == dayIndex, enabled = !confirmed) { dayIndex = i; slot = null }
+                    itemsIndexed(state.days) { i, d ->
+                        SelectChip(d, selected = i == state.selectedDayIndex, enabled = editable) { onSelectDay(i) }
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                FlowRowSlots(
-                    selected = slot,
-                    enabled = !confirmed,
-                    onSelect = { slot = it },
-                )
+                if (state.slots.none { it.state == SlotState.AVAILABLE }) {
+                    Text("No hay horarios disponibles este día.", style = MaterialTheme.typography.bodyMedium, color = InkSecondary)
+                } else {
+                    SlotGrid(state.slots, state.selectedSlot, editable, onSelectSlot)
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Solo se muestran como disponibles los horarios libres para ${service.durationMin} min.",
@@ -114,7 +148,7 @@ fun BookingConfirmationScreen(
                 MapPlaceholder(Modifier.fillMaxWidth().height(140.dp))
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "${MockData.business.name} · ${MockData.business.address}",
+                    "${state.businessName} · ${state.businessAddress}",
                     style = MaterialTheme.typography.bodySmall,
                     color = InkSecondary,
                 )
@@ -125,7 +159,7 @@ fun BookingConfirmationScreen(
                 Text("Estado", style = MaterialTheme.typography.titleSmall, color = Ink)
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (confirmed) {
+                    if (state.isConfirmed) {
                         StatusChip("Confirmada", SuccessGreen, SuccessSoft, icon = Icons.Filled.CheckCircle)
                     } else {
                         AppointmentStatusChip(AppointmentStatus.PENDING)
@@ -169,19 +203,17 @@ private fun SelectChip(label: String, selected: Boolean, enabled: Boolean = true
 
 /** Rejilla de horarios: ocupados y bloqueados se muestran deshabilitados. */
 @Composable
-private fun FlowRowSlots(selected: String?, enabled: Boolean, onSelect: (String) -> Unit) {
-    val rows = MockData.previewSlots.chunked(3)
+private fun SlotGrid(slots: List<TimeSlot>, selected: String?, enabled: Boolean, onSelect: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        rows.forEach { row ->
+        slots.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { s ->
                     val available = s.state == SlotState.AVAILABLE
                     val isSel = s.time == selected
-                    val shape = MaterialTheme.shapes.small
                     Box(
                         Modifier
                             .weight(1f)
-                            .clip(shape)
+                            .clip(MaterialTheme.shapes.small)
                             .background(
                                 when {
                                     isSel -> TurnosOrange
@@ -219,6 +251,48 @@ fun MapPlaceholder(modifier: Modifier = Modifier) {
     Box(modifier.clip(MaterialTheme.shapes.small).background(NeutralSoft))
 }
 
-@Preview(showBackground = true)
+// ---------------------------------------------------------------------------
+// Previews
+// ---------------------------------------------------------------------------
+
+private val previewState = BookingUiState(
+    service = FakeDataSource.services.first(),
+    barber = FakeDataSource.barbers.first(),
+    businessName = FakeDataSource.business.name,
+    businessAddress = FakeDataSource.business.address,
+    days = FakeDataSource.bookingDays,
+    slots = FakeDataSource.previewSlots,
+)
+
 @Composable
-private fun BookingPreview() = TurnosTheme { BookingConfirmationScreen("s1", {}, {}) }
+private fun BookingPreviewHost(state: BookingUiState) = TurnosTheme {
+    BookingConfirmationScreen(state, {}, {}, {}, {}, {})
+}
+
+@Preview(showBackground = true, heightDp = 1100, name = "Reserva - sin horario")
+@Composable
+private fun BookingInitialPreview() = BookingPreviewHost(previewState)
+
+@Preview(showBackground = true, heightDp = 1100, name = "Reserva - horario elegido")
+@Composable
+private fun BookingSelectedPreview() = BookingPreviewHost(previewState.copy(selectedSlot = "11:00 AM"))
+
+@Preview(showBackground = true, heightDp = 1100, name = "Reserva - confirmando")
+@Composable
+private fun BookingConfirmingPreview() = BookingPreviewHost(previewState.copy(selectedSlot = "11:00 AM", isConfirming = true))
+
+@Preview(showBackground = true, heightDp = 1100, name = "Reserva - confirmada")
+@Composable
+private fun BookingConfirmedPreview() = BookingPreviewHost(previewState.copy(selectedSlot = "11:00 AM", isConfirmed = true))
+
+@Preview(showBackground = true, heightDp = 1100, name = "Reserva - horario ya tomado")
+@Composable
+private fun BookingErrorPreview() = BookingPreviewHost(
+    previewState.copy(errorMessage = "Ese horario acaba de ser reservado por alguien más. Elige otro."),
+)
+
+@Preview(showBackground = true, heightDp = 1100, name = "Reserva - día sin horarios")
+@Composable
+private fun BookingNoSlotsPreview() = BookingPreviewHost(
+    previewState.copy(selectedDayIndex = 5, slots = previewState.slots.map { it.copy(state = SlotState.OCCUPIED) }),
+)

@@ -4,41 +4,51 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.PersonAddAlt
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.turnos.data.mock.MockData
 import com.example.turnos.data.model.Barber
 import com.example.turnos.data.model.BarberStatus
+import com.example.turnos.data.source.FakeDataSource
 import com.example.turnos.ui.components.*
 import com.example.turnos.ui.theme.*
-import kotlinx.coroutines.launch
+
+data class TeamUiState(
+    val barbers: List<Barber> = emptyList(),
+    val dateLabel: String = "",
+    val isLoading: Boolean = false,
+) {
+    val availableCount: Int get() = barbers.count { it.status == BarberStatus.AVAILABLE }
+    val appointmentsToday: Int get() = barbers.sumOf { it.appointmentsToday }
+}
 
 @Composable
-fun TeamScreen(onBack: () -> Unit) {
-    val barbers = MockData.barbers
-    val snackbar = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val notify: (String) -> Unit = { msg -> scope.launch { snackbar.showSnackbar(msg) } }
-
-    Scaffold(
-        topBar = {
-            TurnosTopBar(
-                "Equipo / Barberos",
-                onBack = onBack,
-                actionIcon = Icons.Outlined.PersonAddAlt,
-                actionDescription = "Agregar barbero",
-                onAction = { notify("Invitar nuevo barbero") },
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbar) },
-        containerColor = ScreenBackground,
+fun TeamScreen(
+    state: TeamUiState,
+    snackbarHostState: SnackbarHostState? = null,
+    onBack: () -> Unit,
+    onAddBarber: () -> Unit,
+    onManage: (Barber) -> Unit,
+    onViewAgenda: (Barber) -> Unit,
+) {
+    TurnosScaffold(
+        title = "Equipo / Barberos",
+        onBack = onBack,
+        actionIcon = Icons.Outlined.PersonAddAlt,
+        actionDescription = "Agregar barbero",
+        onAction = onAddBarber,
+        snackbarHostState = snackbarHostState,
     ) { padding ->
+        if (state.isLoading) {
+            LoadingContent(Modifier.padding(padding), "Cargando equipo…")
+            return@TurnosScaffold
+        }
         LazyColumn(
             Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -46,26 +56,20 @@ fun TeamScreen(onBack: () -> Unit) {
         ) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatCard("Miembros", barbers.size.toString(), Modifier.weight(1f), valueColor = TurnosOrange)
-                    StatCard("Disponibles", barbers.count { it.status == BarberStatus.AVAILABLE }.toString(), Modifier.weight(1f), valueColor = TurnosOrange)
-                    StatCard("Citas hoy", barbers.sumOf { it.appointmentsToday }.toString(), Modifier.weight(1f))
+                    StatCard("Miembros", state.barbers.size.toString(), Modifier.weight(1f), valueColor = TurnosOrange)
+                    StatCard("Disponibles", state.availableCount.toString(), Modifier.weight(1f), valueColor = TurnosOrange)
+                    StatCard("Citas hoy", state.appointmentsToday.toString(), Modifier.weight(1f))
                 }
             }
-            item { SectionHeader("Miembros del equipo", "Sábado, 15 de junio") }
-            items(barbers, key = { it.id }) { b ->
-                BarberCard(
-                    b,
-                    onManage = { notify("Gestionar a ${b.name}") },
-                    onAgenda = { notify("Agenda de ${b.name}") },
-                )
+            item { SectionHeader("Miembros del equipo", state.dateLabel) }
+            if (state.barbers.isEmpty()) {
+                item { EmptyContent("Todavía no hay barberos en tu equipo.", icon = Icons.Outlined.Groups) }
+            }
+            items(state.barbers, key = { it.id }) { b ->
+                BarberCard(b, onManage = { onManage(b) }, onAgenda = { onViewAgenda(b) })
             }
             item {
-                SecondaryButton(
-                    "AGREGAR BARBERO",
-                    icon = Icons.Outlined.PersonAddAlt,
-                    onClick = { notify("Invitar nuevo barbero") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                SecondaryButton("AGREGAR BARBERO", icon = Icons.Outlined.PersonAddAlt, onClick = onAddBarber, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -104,6 +108,23 @@ private fun BarberCard(b: Barber, onManage: () -> Unit, onAgenda: () -> Unit) {
     }
 }
 
-@Preview(showBackground = true)
+// ---------------------------------------------------------------------------
+// Previews
+// ---------------------------------------------------------------------------
+
 @Composable
-private fun TeamPreview() = TurnosTheme { TeamScreen {} }
+private fun TeamPreviewHost(state: TeamUiState) = TurnosTheme {
+    TeamScreen(state = state, onBack = {}, onAddBarber = {}, onManage = {}, onViewAgenda = {})
+}
+
+@Preview(showBackground = true, heightDp = 1000, name = "Equipo - con barberos")
+@Composable
+private fun TeamPreview() = TeamPreviewHost(TeamUiState(FakeDataSource.barbers, "Sábado, 15 de junio"))
+
+@Preview(showBackground = true, name = "Equipo - vacío")
+@Composable
+private fun TeamEmptyPreview() = TeamPreviewHost(TeamUiState(dateLabel = "Sábado, 15 de junio"))
+
+@Preview(showBackground = true, name = "Equipo - cargando")
+@Composable
+private fun TeamLoadingPreview() = TeamPreviewHost(TeamUiState(isLoading = true))

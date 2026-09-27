@@ -1,9 +1,12 @@
-package com.example.turnos.data.mock
+package com.example.turnos.data.source
 
 import com.example.turnos.data.model.*
 
-/** Datos de prueba que reflejan los diseños. Reemplazar por repositorios reales. */
-object MockData {
+/**
+ * Fuente de datos "fake" para esta entrega (sin backend).
+ * Las Routes leen de aquí; en la siguiente fase se reemplaza por un repositorio real.
+ */
+object FakeDataSource {
 
     val business = BusinessProfile(
         name = "Barbería El Clásico",
@@ -72,4 +75,15 @@ object MockData {
         MessageTemplate("m2", "Recordatorio de cita", "Te esperamos mañana a las {hora} con {barbero}.", "24 h antes", "WhatsApp", true),
         MessageTemplate("m3", "Agradecimiento", "Gracias por visitarnos. ¿Cómo fue tu experiencia?", "2 h después", "SMS", false),
     )
+
+    // ---------- Autenticación fake ----------
+    /** Credenciales de demostración. */
+    const val DEMO_EMAIL = "demo@turnos.com"
+    const val DEMO_PASSWORD = "123456"
+
+    fun login(email: String, password: String): Boolean =
+        email.trim().equals(DEMO_EMAIL, ignoreCase = true) && password == DEMO_PASSWORD
+
+    /** Días que se ofrecen para reservar (fijos para la demo). */
+    val bookingDays = listOf("Lun 15", "Mar 16", "Mié 17", "Jue 18", "Vie 19", "Sáb 20")
 }

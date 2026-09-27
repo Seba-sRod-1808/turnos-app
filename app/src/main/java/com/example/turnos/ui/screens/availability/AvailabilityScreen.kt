@@ -5,19 +5,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,104 +26,117 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.turnos.data.mock.MockData
 import com.example.turnos.data.model.SlotState
 import com.example.turnos.data.model.TimeBlock
+import com.example.turnos.data.model.TimeSlot
+import com.example.turnos.data.source.FakeDataSource
 import com.example.turnos.ui.components.*
 import com.example.turnos.ui.theme.*
-import kotlinx.coroutines.launch
+
+data class AvailabilityUiState(
+    val dayLabels: List<String> = emptyList(),
+    val activeDays: List<Boolean> = emptyList(),
+    val blocks: List<TimeBlock> = emptyList(),
+    val todaySlots: List<TimeSlot> = emptyList(),
+    val isSaving: Boolean = false,
+) {
+    val validationError: String?
+        get() = when {
+            activeDays.none { it } -> "Selecciona al menos un día laborable."
+            blocks.isEmpty() -> "Agrega al menos un bloque de horario."
+            else -> null
+        }
+}
 
 @Composable
-fun AvailabilityScreen(onBack: () -> Unit) {
-    val activeDays = remember { mutableStateListOf(true, true, true, true, true, false, false) }
-    val blocks = remember { mutableStateListOf<TimeBlock>().apply { addAll(MockData.timeBlocks) } }
-    val slots = remember { mutableStateListOf(*MockData.previewSlots.toTypedArray()) }
-    val snackbar = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-
-    Scaffold(
-        topBar = { TurnosTopBar("Control de Disponibilidad", onBack = onBack) },
+fun AvailabilityScreen(
+    state: AvailabilityUiState,
+    snackbarHostState: SnackbarHostState? = null,
+    onBack: () -> Unit,
+    onToggleDay: (Int) -> Unit,
+    onDeleteBlock: (TimeBlock) -> Unit,
+    onAddBlock: () -> Unit,
+    onToggleSlot: (Int) -> Unit,
+    onSave: () -> Unit,
+) {
+    TurnosScaffold(
+        title = "Control de Disponibilidad",
+        onBack = onBack,
+        snackbarHostState = snackbarHostState,
         bottomBar = {
             BottomActionBar {
-                PrimaryButton("GUARDAR CONFIGURACIÓN", onClick = {
-                    scope.launch { snackbar.showSnackbar("Configuración guardada") }
-                })
+                if (state.isSaving) {
+                    Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = TurnosOrange, modifier = Modifier.size(28.dp))
+                    }
+                } else {
+                    PrimaryButton("GUARDAR CONFIGURACIÓN", onClick = onSave, enabled = state.validationError == null)
+                }
             }
         },
-        snackbarHost = { SnackbarHost(snackbar) },
-        containerColor = ScreenBackground,
     ) { padding ->
-        Column(
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+        LazyColumn(
+            Modifier.padding(padding).fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            InfoBanner(
-                "Define tu horario semanal general. Los cambios se aplicarán en tiempo real a tus citas disponibles.",
-                icon = Icons.Outlined.Settings,
-            )
-
-            SectionHeader("Días Laborables", modifier = Modifier.padding(top = 12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MockData.workDays.forEachIndexed { i, d ->
-                    DayCircle(d, activeDays[i]) { activeDays[i] = !activeDays[i] }
+            item {
+                InfoBanner(
+                    "Define tu horario semanal general. Los cambios se aplicarán en tiempo real a tus citas disponibles.",
+                    icon = Icons.Outlined.Settings,
+                )
+            }
+            state.validationError?.let { msg ->
+                item {
+                    InfoBanner(msg, icon = Icons.Outlined.ErrorOutline, fg = DangerRed, bg = DangerSoft, border = DangerRed.copy(alpha = 0.4f))
                 }
             }
 
-            SectionHeader("Bloques de Horario", modifier = Modifier.padding(top = 16.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                blocks.forEach { block ->
-                    TurnosCard(padding = 12.dp) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Schedule, null, tint = TurnosOrange, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(10.dp))
-                            Text("${block.start} - ${block.end}", style = MaterialTheme.typography.titleSmall, color = Ink, modifier = Modifier.weight(1f))
-                            IconButton(onClick = { blocks.remove(block) }) {
-                                Icon(Icons.Outlined.DeleteOutline, "Eliminar bloque", tint = InkSecondary)
-                            }
+            item { SectionHeader("Días Laborables", modifier = Modifier.padding(top = 4.dp)) }
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    state.dayLabels.forEachIndexed { i, d ->
+                        DayCircle(d, state.activeDays.getOrElse(i) { false }) { onToggleDay(i) }
+                    }
+                }
+            }
+
+            item { SectionHeader("Bloques de Horario", modifier = Modifier.padding(top = 8.dp)) }
+            items(state.blocks, key = { it.id }) { block ->
+                TurnosCard(padding = 12.dp) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Schedule, null, tint = TurnosOrange, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text("${block.start} - ${block.end}", style = MaterialTheme.typography.titleSmall, color = Ink, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { onDeleteBlock(block) }) {
+                            Icon(Icons.Outlined.DeleteOutline, "Eliminar bloque", tint = InkSecondary)
                         }
                     }
                 }
-                SecondaryButton(
-                    "AGREGAR BLOQUE",
-                    icon = Icons.Filled.Add,
-                    onClick = { blocks.add(TimeBlock("t${blocks.size + 10}", "07:00 PM", "08:00 PM")) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            }
+            item {
+                SecondaryButton("AGREGAR BLOQUE", icon = Icons.Filled.Add, onClick = onAddBlock, modifier = Modifier.fillMaxWidth())
             }
 
-            Spacer(Modifier.height(16.dp))
-            TurnosCard {
-                Text("Vista Previa (Hoy)", style = MaterialTheme.typography.titleSmall, color = Ink)
-                Text(
-                    "Toca un horario libre para bloquearlo manualmente.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkMuted,
-                )
-                Spacer(Modifier.height(10.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    slots.forEachIndexed { i, s ->
-                        SlotRow(s.time, s.state) {
-                            slots[i] = when (s.state) {
-                                SlotState.AVAILABLE -> s.copy(state = SlotState.BLOCKED)
-                                SlotState.BLOCKED -> s.copy(state = SlotState.AVAILABLE)
-                                SlotState.OCCUPIED -> s // ocupado por una cita: no editable
-                            }
-                        }
+            item {
+                Spacer(Modifier.height(6.dp))
+                TurnosCard {
+                    Text("Vista Previa (Hoy)", style = MaterialTheme.typography.titleSmall, color = Ink)
+                    Text("Toca un horario libre para bloquearlo manualmente.", style = MaterialTheme.typography.bodySmall, color = InkMuted)
+                    Spacer(Modifier.height(10.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        state.todaySlots.forEachIndexed { i, s -> SlotRow(s.time, s.state) { onToggleSlot(i) } }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        Legend(SuccessGreen, "Disponible")
+                        Spacer(Modifier.width(14.dp))
+                        Legend(InkMuted, "Ocupado")
+                        Spacer(Modifier.width(14.dp))
+                        Legend(DangerRed, "Bloqueado")
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    Legend(SuccessGreen, "Disponible")
-                    Spacer(Modifier.width(14.dp))
-                    Legend(InkMuted, "Ocupado")
-                    Spacer(Modifier.width(14.dp))
-                    Legend(DangerRed, "Bloqueado")
-                }
             }
-            Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -178,6 +192,34 @@ private fun Legend(color: Color, label: String) {
     }
 }
 
-@Preview(showBackground = true)
+// ---------------------------------------------------------------------------
+// Previews
+// ---------------------------------------------------------------------------
+
+private val previewState = AvailabilityUiState(
+    dayLabels = FakeDataSource.workDays,
+    activeDays = listOf(true, true, true, true, true, false, false),
+    blocks = FakeDataSource.timeBlocks,
+    todaySlots = FakeDataSource.previewSlots,
+)
+
 @Composable
-private fun AvailabilityPreview() = TurnosTheme { AvailabilityScreen {} }
+private fun AvailabilityPreviewHost(state: AvailabilityUiState) = TurnosTheme {
+    AvailabilityScreen(state = state, onBack = {}, onToggleDay = {}, onDeleteBlock = {}, onAddBlock = {}, onToggleSlot = {}, onSave = {})
+}
+
+@Preview(showBackground = true, heightDp = 1000, name = "Disponibilidad - configurada")
+@Composable
+private fun AvailabilityPreview() = AvailabilityPreviewHost(previewState)
+
+@Preview(showBackground = true, heightDp = 1000, name = "Disponibilidad - guardando")
+@Composable
+private fun AvailabilitySavingPreview() = AvailabilityPreviewHost(previewState.copy(isSaving = true))
+
+@Preview(showBackground = true, heightDp = 1000, name = "Disponibilidad - sin días (error)")
+@Composable
+private fun AvailabilityNoDaysPreview() = AvailabilityPreviewHost(previewState.copy(activeDays = List(7) { false }))
+
+@Preview(showBackground = true, heightDp = 1000, name = "Disponibilidad - sin bloques (error)")
+@Composable
+private fun AvailabilityNoBlocksPreview() = AvailabilityPreviewHost(previewState.copy(blocks = emptyList()))

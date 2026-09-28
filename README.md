@@ -1,7 +1,7 @@
-# Turnos — Entrega: vistas en Jetpack Compose
+# App de turnos
 
-App de reservas para negocios locales (barberías). Proyecto de Programación de Plataformas Móviles, UVG.
-Esta entrega implementa **todas las vistas a nivel visual**: Kotlin + Jetpack Compose + Material 3, con fuente de datos fake y sin backend.
+App de reservas para negocios locales. Proyecto de Programación de Plataformas Móviles, UVG.
+Esta entrega implementa **todas las vistas a nivel visual**: Kotlin + Jetpack Compose + Material 3, con fuente de datos fake y sin backend, de momento se usa de ejemplo una barbería para el local.
 
 ## Funcionalidades
 
@@ -18,14 +18,8 @@ Se implementan todas las funcionalidades del diseño en esta entrega:
 | Métodos de pago | Métodos de Pago |
 | Notificaciones y recordatorios | Notificaciones |
 
-Quedan para fases posteriores, porque dependen de backend o de APIs externas: el mapa real (Google Maps), el inicio de sesión con Google, el envío real de notificaciones (FCM) y el modo sin conexión (Room).
-
+Quedan para fases posteriores, porque dependen de backend o de APIs externas: el mapa real con Google Maps, el inicio de sesión con Google, el envío real de notificaciones y el modo sin conexión.
 ## Patrón Route / Screen
-
-Cada pantalla está dividida en dos archivos:
-
-- **`XxxRoute.kt`**: composable con estado. Guarda el `UiState`, lee de `FakeDataSource` y maneja los eventos.
-- **`XxxScreen.kt`**: composable **stateless**. Recibe un `XxxUiState` y lambdas de eventos, y solo dibuja la UI. Aquí están los `@Preview`, uno por cada estado de la pantalla.
 
 | Pantalla | Estados con preview |
 |---|---|
@@ -39,33 +33,6 @@ Cada pantalla está dividida en dos archivos:
 | Equipo | con barberos, vacío, cargando |
 | Métodos de Pago | configurado, todos desactivados (advertencia) |
 | Notificaciones | configuradas, sin plantillas, editando plantilla |
-
-## Estructura
-
-```
-app/src/main/java/com/example/turnos/
-├── MainActivity.kt
-├── navigation/                  # Navegación básica entre Routes (opcional en esta entrega)
-│   ├── Destinations.kt
-│   └── TurnosNavHost.kt
-├── data/
-│   ├── model/Models.kt          # data classes: Service, Barber, Appointment, TimeSlot…
-│   └── source/FakeDataSource.kt # Datos fake que alimentan las listas Lazy
-└── ui/
-    ├── theme/                   # Colores, tipografía y tema
-    ├── components/              # Componentes reutilizables + LoadingContent / EmptyContent / ErrorContent
-    └── screens/
-        ├── auth/          LoginRoute.kt          · LoginScreen.kt
-        ├── catalog/       CatalogRoute.kt        · CatalogScreen.kt
-        ├── booking/       BookingRoute.kt        · BookingConfirmationScreen.kt
-        ├── history/       HistoryRoute.kt        · HistoryScreen.kt
-        ├── business/      MyBusinessRoute.kt     · MyBusinessScreen.kt
-        ├── services/      ServicesRoute.kt       · ServicesScreen.kt
-        ├── availability/  AvailabilityRoute.kt   · AvailabilityScreen.kt
-        ├── team/          TeamRoute.kt           · TeamScreen.kt
-        ├── payments/      PaymentMethodsRoute.kt · PaymentMethodsScreen.kt
-        └── notifications/ NotificationsRoute.kt  · NotificationsScreen.kt
-```
 
 ## Probar la app
 

@@ -6,76 +6,74 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.turnos.data.model.PaymentMethod
-import com.example.turnos.data.source.FakeDataSource
+import com.example.turnos.di.turnosViewModel
 import com.example.turnos.ui.components.*
+import com.example.turnos.ui.preview.PreviewData
 import com.example.turnos.ui.theme.*
+import com.example.turnos.util.quetzales
 
-/** Resumen de cobros del mes (tarjeta oscura del diseño). */
-data class RevenueSummary(
-    val monthLabel: String,
-    val total: Int,
-    val deltaPct: Int,
-    val count: Int,
-    val nextDeposit: Int,
-)
-
-data class PaymentsUiState(
-    val summary: RevenueSummary? = null,
-    val methods: List<PaymentMethod> = emptyList(),
+@Composable
+fun PaymentsRoute(
+    onBack: () -> Unit,
+    viewModel: PaymentsViewModel = turnosViewModel { PaymentsViewModel(settingsRepository, appointmentRepository) },
 ) {
-    val enabledCount: Int get() = methods.count { it.enabled }
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    UserMessageEffect(state.userMessage, snackbar) { viewModel.onEvent(PaymentsEvent.OnMessageShown) }
+
+    PaymentsScreen(state, snackbar) { event ->
+        when (event) {
+            PaymentsEvent.OnBackClick -> onBack()
+            else -> viewModel.onEvent(event)
+        }
+    }
 }
 
 @Composable
-fun PaymentMethodsScreen(
-    state: PaymentsUiState,
-    onBack: () -> Unit,
-    onToggleMethod: (PaymentMethod, Boolean) -> Unit,
-    onConfigureDeposit: () -> Unit,
+fun PaymentsScreen(
+    state: PaymentsState,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onEvent: (PaymentsEvent) -> Unit,
 ) {
     TurnosScaffold(
         title = "Métodos de Pago",
-        onBack = onBack,
-        actionIcon = Icons.Outlined.Settings,
-        actionDescription = "Ajustes de pago",
+        onBack = { onEvent(PaymentsEvent.OnBackClick) },
+        snackbarHostState = snackbarHostState,
     ) { padding ->
+        if (state.isLoading) {
+            LoadingContent(Modifier.padding(padding))
+            return@TurnosScaffold
+        }
         LazyColumn(
             Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            state.summary?.let { item { RevenueCard(it) } }
+            state.summary?.let { summary -> item { RevenueCard(summary) } }
 
             item {
-                SectionHeader(
-                    "Métodos habilitados",
-                    "${state.enabledCount} de ${state.methods.size} activos",
-                    Modifier.padding(top = 6.dp),
-                )
+                SectionHeader("Métodos habilitados", "${state.enabledCount} de ${state.methods.size} activos", Modifier.padding(top = 6.dp))
             }
             if (state.enabledCount == 0 && state.methods.isNotEmpty()) {
-                item {
-                    InfoBanner(
-                        "No tienes métodos activos: tus clientes no podrán pagar desde la app.",
-                        icon = Icons.Outlined.ErrorOutline,
-                        fg = DangerRed, bg = DangerSoft, border = DangerRed.copy(alpha = 0.4f),
-                    )
-                }
+                item { ErrorBanner("No tienes métodos activos: tus clientes no podrán pagar desde la app.") }
             }
             items(state.methods, key = { it.id }) { m ->
-                PaymentMethodCard(m, onToggle = { onToggleMethod(m, it) })
+                PaymentMethodCard(m) { onEvent(PaymentsEvent.OnToggleMethod(m, it)) }
             }
 
             state.summary?.let { s ->
@@ -90,7 +88,7 @@ fun PaymentMethodsScreen(
                                 "Configurar",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = TurnosOrange,
-                                modifier = Modifier.clickable(onClick = onConfigureDeposit).padding(6.dp),
+                                modifier = Modifier.clickable { onEvent(PaymentsEvent.OnConfigureDepositClick) }.padding(6.dp),
                             )
                         }
                     }
@@ -104,9 +102,9 @@ fun PaymentMethodsScreen(
 @Composable
 private fun PaymentMethodCard(m: PaymentMethod, onToggle: (Boolean) -> Unit) {
     val icon = when (m.id) {
-        "p2" -> Icons.Outlined.CreditCard
-        "p3" -> Icons.Outlined.AccountBalance
-        "p4" -> Icons.Outlined.Link
+        "card" -> Icons.Outlined.CreditCard
+        "transfer" -> Icons.Outlined.AccountBalance
+        "link" -> Icons.Outlined.Link
         else -> Icons.Outlined.Payments
     }
     TurnosCard(padding = 14.dp) {
@@ -137,24 +135,25 @@ private fun RevenueCard(s: RevenueSummary) {
             .background(DarkCard)
             .padding(16.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Cobros de ${s.monthLabel}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f), modifier = Modifier.weight(1f))
-            Row(
-                Modifier.clip(MaterialTheme.shapes.small).background(Color.White.copy(alpha = 0.12f)).padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Este mes", style = MaterialTheme.typography.labelMedium, color = Color.White)
-                Icon(Icons.Filled.KeyboardArrowDown, null, tint = Color.White, modifier = Modifier.size(16.dp))
-            }
-        }
+        Text("Cobros de ${s.monthLabel}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) {
                 Text(quetzales(s.total), style = MaterialTheme.typography.headlineMedium, color = Color.White)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = Color(0xFF4ADE80), modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("${s.deltaPct}% vs. mes anterior", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4ADE80))
+                val delta = s.deltaPct
+                if (delta != null) {
+                    val up = delta >= 0
+                    val color = if (up) Color(0xFF4ADE80) else Color(0xFFF87171)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (up) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                            null, tint = color, modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("${if (up) "+" else ""}$delta% vs. mes anterior", style = MaterialTheme.typography.bodySmall, color = color)
+                    }
+                } else {
+                    Text("Primer mes con cobros", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -169,19 +168,23 @@ private fun RevenueCard(s: RevenueSummary) {
 // Previews
 // ---------------------------------------------------------------------------
 
-private val previewRevenue = RevenueSummary("junio", 4860, 12, 34, 1420)
+private val sample = PaymentsState(
+    summary = RevenueSummary("junio", 4860, 12, 34, 1420),
+    methods = PreviewData.paymentMethods,
+    isLoading = false,
+)
 
 @Composable
-private fun PaymentsPreviewHost(state: PaymentsUiState) = TurnosTheme {
-    PaymentMethodsScreen(state, {}, { _, _ -> }, {})
-}
+private fun Host(state: PaymentsState) = TurnosTheme { PaymentsScreen(state) {} }
 
 @Preview(showBackground = true, heightDp = 1000, name = "Pagos - configurado")
 @Composable
-private fun PaymentsPreview() = PaymentsPreviewHost(PaymentsUiState(previewRevenue, FakeDataSource.paymentMethods))
+private fun PaymentsPreview() = Host(sample)
 
-@Preview(showBackground = true, heightDp = 1000, name = "Pagos - todos desactivados (advertencia)")
+@Preview(showBackground = true, heightDp = 1000, name = "Pagos - todos desactivados")
 @Composable
-private fun PaymentsNoneEnabledPreview() = PaymentsPreviewHost(
-    PaymentsUiState(previewRevenue, FakeDataSource.paymentMethods.map { it.copy(enabled = false) }),
-)
+private fun PaymentsNoneEnabledPreview() = Host(sample.copy(methods = PreviewData.paymentMethods.map { it.copy(enabled = false) }))
+
+@Preview(showBackground = true, name = "Pagos - cargando")
+@Composable
+private fun PaymentsLoadingPreview() = Host(PaymentsState(isLoading = true))

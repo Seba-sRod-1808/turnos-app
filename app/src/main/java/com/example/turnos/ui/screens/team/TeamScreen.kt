@@ -9,40 +9,50 @@ import androidx.compose.material.icons.outlined.PersonAddAlt
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.turnos.data.model.Barber
-import com.example.turnos.data.model.BarberStatus
-import com.example.turnos.data.source.FakeDataSource
+import com.example.turnos.di.turnosViewModel
 import com.example.turnos.ui.components.*
+import com.example.turnos.ui.preview.PreviewData
 import com.example.turnos.ui.theme.*
 
-data class TeamUiState(
-    val barbers: List<Barber> = emptyList(),
-    val dateLabel: String = "",
-    val isLoading: Boolean = false,
+@Composable
+fun TeamRoute(
+    onBack: () -> Unit,
+    onViewAgenda: () -> Unit,
+    viewModel: TeamViewModel = turnosViewModel { TeamViewModel(barberRepository) },
 ) {
-    val availableCount: Int get() = barbers.count { it.status == BarberStatus.AVAILABLE }
-    val appointmentsToday: Int get() = barbers.sumOf { it.appointmentsToday }
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    UserMessageEffect(state.userMessage, snackbar) { viewModel.onEvent(TeamEvent.OnMessageShown) }
+
+    TeamScreen(state, snackbar) { event ->
+        when (event) {
+            TeamEvent.OnBackClick -> onBack()
+            is TeamEvent.OnViewAgendaClick -> onViewAgenda()
+            else -> viewModel.onEvent(event)
+        }
+    }
 }
 
 @Composable
 fun TeamScreen(
-    state: TeamUiState,
-    snackbarHostState: SnackbarHostState? = null,
-    onBack: () -> Unit,
-    onAddBarber: () -> Unit,
-    onManage: (Barber) -> Unit,
-    onViewAgenda: (Barber) -> Unit,
+    state: TeamState,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onEvent: (TeamEvent) -> Unit,
 ) {
     TurnosScaffold(
         title = "Equipo / Barberos",
-        onBack = onBack,
+        onBack = { onEvent(TeamEvent.OnBackClick) },
         actionIcon = Icons.Outlined.PersonAddAlt,
         actionDescription = "Agregar barbero",
-        onAction = onAddBarber,
+        onAction = { onEvent(TeamEvent.OnAddBarberClick) },
         snackbarHostState = snackbarHostState,
     ) { padding ->
         if (state.isLoading) {
@@ -66,13 +76,24 @@ fun TeamScreen(
                 item { EmptyContent("Todavía no hay barberos en tu equipo.", icon = Icons.Outlined.Groups) }
             }
             items(state.barbers, key = { it.id }) { b ->
-                BarberCard(b, onManage = { onManage(b) }, onAgenda = { onViewAgenda(b) })
+                BarberCard(
+                    b,
+                    onManage = { onEvent(TeamEvent.OnManageClick(b)) },
+                    onAgenda = { onEvent(TeamEvent.OnViewAgendaClick(b)) },
+                )
             }
             item {
-                SecondaryButton("AGREGAR BARBERO", icon = Icons.Outlined.PersonAddAlt, onClick = onAddBarber, modifier = Modifier.fillMaxWidth())
+                SecondaryButton(
+                    "AGREGAR BARBERO",
+                    icon = Icons.Outlined.PersonAddAlt,
+                    onClick = { onEvent(TeamEvent.OnAddBarberClick) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }
+
+    state.form?.let { form -> BarberFormDialog(form, onEvent) }
 }
 
 @Composable
@@ -102,10 +123,37 @@ private fun BarberCard(b: Barber, onManage: () -> Unit, onAgenda: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            NeutralButton("Gestionar", onManage, Modifier.weight(1f))
+            NeutralButton("Cambiar estado", onManage, Modifier.weight(1f))
             SecondaryButton("Ver agenda", onAgenda, Modifier.weight(1f), compact = true)
         }
     }
+}
+
+@Composable
+private fun BarberFormDialog(form: BarberForm, onEvent: (TeamEvent) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onEvent(TeamEvent.OnDismissForm) },
+        containerColor = SurfaceWhite,
+        title = { Text("Agregar barbero") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    form.name, { onEvent(TeamEvent.OnFormChange(form.copy(name = it))) },
+                    label = { Text("Nombre") }, singleLine = true, colors = turnosFieldColors(), modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    form.role, { onEvent(TeamEvent.OnFormChange(form.copy(role = it))) },
+                    label = { Text("Puesto") }, singleLine = true, colors = turnosFieldColors(), modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = form.isValid, onClick = { onEvent(TeamEvent.OnSaveBarber) }) {
+                Text("Agregar", color = if (form.isValid) TurnosOrange else InkMuted)
+            }
+        },
+        dismissButton = { TextButton(onClick = { onEvent(TeamEvent.OnDismissForm) }) { Text("Cancelar", color = InkSecondary) } },
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -113,18 +161,20 @@ private fun BarberCard(b: Barber, onManage: () -> Unit, onAgenda: () -> Unit) {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun TeamPreviewHost(state: TeamUiState) = TurnosTheme {
-    TeamScreen(state = state, onBack = {}, onAddBarber = {}, onManage = {}, onViewAgenda = {})
-}
+private fun Host(state: TeamState) = TurnosTheme { TeamScreen(state) {} }
 
 @Preview(showBackground = true, heightDp = 1000, name = "Equipo - con barberos")
 @Composable
-private fun TeamPreview() = TeamPreviewHost(TeamUiState(FakeDataSource.barbers, "Sábado, 15 de junio"))
+private fun TeamPreview() = Host(TeamState(PreviewData.barbers, "Lunes, 15 de junio", isLoading = false))
 
 @Preview(showBackground = true, name = "Equipo - vacío")
 @Composable
-private fun TeamEmptyPreview() = TeamPreviewHost(TeamUiState(dateLabel = "Sábado, 15 de junio"))
+private fun TeamEmptyPreview() = Host(TeamState(dateLabel = "Lunes, 15 de junio", isLoading = false))
+
+@Preview(showBackground = true, name = "Equipo - agregar barbero")
+@Composable
+private fun TeamFormPreview() = Host(TeamState(PreviewData.barbers, "Lunes, 15 de junio", isLoading = false, form = BarberForm("Carlos Pérez")))
 
 @Preview(showBackground = true, name = "Equipo - cargando")
 @Composable
-private fun TeamLoadingPreview() = TeamPreviewHost(TeamUiState(isLoading = true))
+private fun TeamLoadingPreview() = Host(TeamState(isLoading = true))

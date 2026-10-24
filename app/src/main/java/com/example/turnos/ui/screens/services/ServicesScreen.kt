@@ -7,93 +7,106 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.ContentCut
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.turnos.data.model.Service
-import com.example.turnos.data.source.FakeDataSource
+import com.example.turnos.di.turnosViewModel
 import com.example.turnos.ui.components.*
+import com.example.turnos.ui.preview.PreviewData
 import com.example.turnos.ui.theme.*
+import com.example.turnos.util.quetzales
 
-/** Campos del formulario de agregar / editar servicio. */
-data class ServiceForm(
-    val id: String? = null, // null = servicio nuevo
-    val name: String = "",
-    val description: String = "",
-    val duration: String = "30",
-    val price: String = "",
+@Composable
+fun ServicesRoute(
+    onBack: () -> Unit,
+    viewModel: ServicesViewModel = turnosViewModel { ServicesViewModel(serviceRepository) },
 ) {
-    val isNew: Boolean get() = id == null
-    val isValid: Boolean
-        get() = name.isNotBlank() && (duration.toIntOrNull() ?: 0) > 0 && price.toIntOrNull() != null
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    UserMessageEffect(state.userMessage, snackbar) { viewModel.onEvent(ServicesEvent.OnMessageShown) }
+
+    ServicesScreen(state, snackbar) { event ->
+        when (event) {
+            ServicesEvent.OnBackClick -> onBack()
+            else -> viewModel.onEvent(event)
+        }
+    }
 }
 
-data class ServicesUiState(
-    val services: List<Service> = emptyList(),
-    /** Formulario abierto; null = diálogo cerrado. */
-    val form: ServiceForm? = null,
-) {
-    val activeCount: Int get() = services.count { it.active }
-    val pausedCount: Int get() = services.size - activeCount
-}
-
-/** Gestión del catálogo: agregar, editar, pausar y eliminar servicios. */
 @Composable
 fun ServicesScreen(
-    state: ServicesUiState,
-    onBack: () -> Unit,
-    onToggleActive: (Service, Boolean) -> Unit,
-    onEditClick: (Service) -> Unit,
-    onAddClick: () -> Unit,
-    onFormChange: (ServiceForm) -> Unit,
-    onFormSave: () -> Unit,
-    onFormDelete: () -> Unit,
-    onFormDismiss: () -> Unit,
+    state: ServicesState,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onEvent: (ServicesEvent) -> Unit,
 ) {
     TurnosScaffold(
         title = "Servicios y Precios",
-        onBack = onBack,
-        actionIcon = Icons.Filled.Search,
-        actionDescription = "Buscar",
+        onBack = { onEvent(ServicesEvent.OnBackClick) },
+        actionIcon = if (state.isSearching) Icons.Filled.Close else Icons.Filled.Search,
+        actionDescription = if (state.isSearching) "Cerrar búsqueda" else "Buscar",
+        onAction = { onEvent(ServicesEvent.OnToggleSearch) },
+        snackbarHostState = snackbarHostState,
     ) { padding ->
+        if (state.isLoading) {
+            LoadingContent(Modifier.padding(padding))
+            return@TurnosScaffold
+        }
         LazyColumn(
             Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item {
-                InfoBanner(
-                    "Los cambios de precio y estado se reflejan de inmediato en el catálogo de reservas.",
-                    icon = Icons.Outlined.Sell,
-                )
+                InfoBanner("Los cambios de precio y estado se reflejan de inmediato en el catálogo de reservas.", icon = Icons.Outlined.Sell)
+            }
+            if (state.isSearching) {
+                item {
+                    OutlinedTextField(
+                        value = state.query,
+                        onValueChange = { onEvent(ServicesEvent.OnQueryChange(it)) },
+                        placeholder = { Text("Buscar servicio") },
+                        leadingIcon = { Icon(Icons.Filled.Search, null) },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.small,
+                        colors = turnosFieldColors(),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
             item {
                 val paused = state.pausedCount
                 SectionHeader("Tus servicios", "${state.activeCount} activos · $paused pausado${if (paused == 1) "" else "s"}")
             }
-            if (state.services.isEmpty()) {
-                item { EmptyContent("Aún no tienes servicios. Agrega el primero.", icon = Icons.Outlined.ContentCut) }
+            if (state.visibleServices.isEmpty()) {
+                item { EmptyContent("No hay servicios que mostrar. Agrega el primero.", icon = Icons.Outlined.ContentCut) }
             }
-            items(state.services, key = { it.id }) { s ->
-                ServiceAdminCard(s, onToggle = { onToggleActive(s, it) }, onEdit = { onEditClick(s) })
+            items(state.visibleServices, key = { it.id }) { s ->
+                ServiceAdminCard(
+                    service = s,
+                    onToggle = { onEvent(ServicesEvent.OnToggleActive(s, it)) },
+                    onEdit = { onEvent(ServicesEvent.OnEditClick(s)) },
+                )
             }
             item {
-                SecondaryButton("AGREGAR SERVICIO", icon = Icons.Filled.Add, onClick = onAddClick, modifier = Modifier.fillMaxWidth())
+                SecondaryButton("AGREGAR SERVICIO", icon = Icons.Filled.Add, onClick = { onEvent(ServicesEvent.OnAddClick) }, modifier = Modifier.fillMaxWidth())
             }
         }
     }
 
-    state.form?.let { form ->
-        ServiceEditorDialog(form, onFormChange, onFormSave, onFormDelete, onFormDismiss)
-    }
+    state.form?.let { form -> ServiceEditorDialog(form, onEvent) }
 }
 
 @Composable
@@ -129,40 +142,35 @@ private fun ServiceAdminCard(service: Service, onToggle: (Boolean) -> Unit, onEd
 }
 
 @Composable
-private fun ServiceEditorDialog(
-    form: ServiceForm,
-    onChange: (ServiceForm) -> Unit,
-    onSave: () -> Unit,
-    onDelete: () -> Unit,
-    onDismiss: () -> Unit,
-) {
+private fun ServiceEditorDialog(form: ServiceForm, onEvent: (ServicesEvent) -> Unit) {
+    val change: (ServiceForm) -> Unit = { onEvent(ServicesEvent.OnFormChange(it)) }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { onEvent(ServicesEvent.OnDismissForm) },
         containerColor = SurfaceWhite,
         title = { Text(if (form.isNew) "Nuevo servicio" else "Editar servicio") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                EditorField("Nombre", form.name) { onChange(form.copy(name = it)) }
-                EditorField("Descripción", form.description) { onChange(form.copy(description = it)) }
+                EditorField("Nombre", form.name) { change(form.copy(name = it)) }
+                EditorField("Descripción", form.description) { change(form.copy(description = it)) }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     EditorField("Duración (min)", form.duration, Modifier.weight(1f), numeric = true) {
-                        onChange(form.copy(duration = it.filter(Char::isDigit)))
+                        change(form.copy(duration = it.filter(Char::isDigit)))
                     }
                     EditorField("Precio (Q)", form.price, Modifier.weight(1f), numeric = true) {
-                        onChange(form.copy(price = it.filter(Char::isDigit)))
+                        change(form.copy(price = it.filter(Char::isDigit)))
                     }
                 }
                 if (!form.isNew) {
-                    TextButton(onClick = onDelete) { Text("Eliminar servicio", color = DangerRed) }
+                    TextButton(onClick = { onEvent(ServicesEvent.OnDeleteFromForm) }) { Text("Eliminar servicio", color = DangerRed) }
                 }
             }
         },
         confirmButton = {
-            TextButton(enabled = form.isValid, onClick = onSave) {
+            TextButton(enabled = form.isValid, onClick = { onEvent(ServicesEvent.OnSaveForm) }) {
                 Text("Guardar", color = if (form.isValid) TurnosOrange else InkMuted)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = InkSecondary) } },
+        dismissButton = { TextButton(onClick = { onEvent(ServicesEvent.OnDismissForm) }) { Text("Cancelar", color = InkSecondary) } },
     )
 }
 
@@ -181,11 +189,7 @@ private fun EditorField(
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = if (numeric) KeyboardType.Number else KeyboardType.Text),
         shape = MaterialTheme.shapes.small,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = TurnosOrange,
-            focusedLabelColor = TurnosOrange,
-            cursorColor = TurnosOrange,
-        ),
+        colors = turnosFieldColors(),
         modifier = modifier.fillMaxWidth(),
     )
 }
@@ -194,27 +198,23 @@ private fun EditorField(
 // Previews
 // ---------------------------------------------------------------------------
 
-private val previewState = ServicesUiState(services = FakeDataSource.services)
+private val sample = ServicesState(services = PreviewData.services, isLoading = false)
 
 @Composable
-private fun ServicesPreviewHost(state: ServicesUiState) = TurnosTheme {
-    ServicesScreen(state, {}, { _, _ -> }, {}, {}, {}, {}, {}, {})
-}
+private fun Host(state: ServicesState) = TurnosTheme { ServicesScreen(state) {} }
 
 @Preview(showBackground = true, heightDp = 900, name = "Servicios - lista")
 @Composable
-private fun ServicesPreview() = ServicesPreviewHost(previewState)
+private fun ServicesPreview() = Host(sample)
 
 @Preview(showBackground = true, name = "Servicios - vacío")
 @Composable
-private fun ServicesEmptyPreview() = ServicesPreviewHost(ServicesUiState())
+private fun ServicesEmptyPreview() = Host(ServicesState(isLoading = false))
 
-@Preview(showBackground = true, name = "Servicios - nuevo servicio")
+@Preview(showBackground = true, name = "Servicios - nuevo")
 @Composable
-private fun ServicesNewPreview() = ServicesPreviewHost(previewState.copy(form = ServiceForm()))
+private fun ServicesNewPreview() = Host(sample.copy(form = ServiceForm()))
 
-@Preview(showBackground = true, name = "Servicios - editar servicio")
+@Preview(showBackground = true, name = "Servicios - editar")
 @Composable
-private fun ServicesEditPreview() = ServicesPreviewHost(
-    previewState.copy(form = ServiceForm("s1", "Corte Clásico", "Corte tradicional y lavado", "45", "150")),
-)
+private fun ServicesEditPreview() = Host(sample.copy(form = ServiceForm(1, "Corte Clásico", "Corte tradicional y lavado", "45", "150")))

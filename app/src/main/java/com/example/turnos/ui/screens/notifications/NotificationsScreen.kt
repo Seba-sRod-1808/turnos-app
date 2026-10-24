@@ -8,55 +8,57 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.turnos.data.model.MessageTemplate
 import com.example.turnos.data.model.NotificationPref
-import com.example.turnos.data.source.FakeDataSource
+import com.example.turnos.di.turnosViewModel
 import com.example.turnos.ui.components.*
+import com.example.turnos.ui.preview.PreviewData
 import com.example.turnos.ui.theme.*
 
-/** Campos del formulario de plantilla. */
-data class TemplateForm(
-    val id: String? = null, // null = plantilla nueva
-    val title: String = "",
-    val body: String = "",
-    val active: Boolean = true,
+@Composable
+fun NotificationsRoute(
+    onBack: () -> Unit,
+    viewModel: NotificationsViewModel = turnosViewModel { NotificationsViewModel(settingsRepository) },
 ) {
-    val isNew: Boolean get() = id == null
-    val isValid: Boolean get() = title.isNotBlank() && body.isNotBlank()
-}
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    UserMessageEffect(state.userMessage, snackbar) { viewModel.onEvent(NotificationsEvent.OnMessageShown) }
 
-data class NotificationsUiState(
-    val prefs: List<NotificationPref> = emptyList(),
-    val templates: List<MessageTemplate> = emptyList(),
-    val lastDelivery: String? = null,
-    /** Formulario abierto; null = diálogo cerrado. */
-    val form: TemplateForm? = null,
-) {
-    val activePrefs: Int get() = prefs.count { it.enabled }
+    NotificationsScreen(state, snackbar) { event ->
+        when (event) {
+            NotificationsEvent.OnBackClick -> onBack()
+            else -> viewModel.onEvent(event)
+        }
+    }
 }
 
 @Composable
 fun NotificationsScreen(
-    state: NotificationsUiState,
-    onBack: () -> Unit,
-    onTogglePref: (NotificationPref, Boolean) -> Unit,
-    onEditTemplate: (MessageTemplate) -> Unit,
-    onNewTemplate: () -> Unit,
-    onFormChange: (TemplateForm) -> Unit,
-    onFormSave: () -> Unit,
-    onFormDismiss: () -> Unit,
+    state: NotificationsState,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onEvent: (NotificationsEvent) -> Unit,
 ) {
     TurnosScaffold(
         title = "Notificaciones",
-        onBack = onBack,
+        onBack = { onEvent(NotificationsEvent.OnBackClick) },
         actionIcon = Icons.Outlined.NotificationsActive,
-        actionDescription = "Probar notificación",
+        actionDescription = "Enviar notificación de prueba",
+        onAction = { onEvent(NotificationsEvent.OnSendTestClick) },
+        snackbarHostState = snackbarHostState,
     ) { padding ->
+        if (state.isLoading) {
+            LoadingContent(Modifier.padding(padding))
+            return@TurnosScaffold
+        }
         LazyColumn(
             Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -66,7 +68,7 @@ fun NotificationsScreen(
             item {
                 TurnosCard(padding = 4.dp) {
                     state.prefs.forEachIndexed { i, p ->
-                        PrefRow(p, prefIcon(p.id)) { onTogglePref(p, it) }
+                        PrefRow(p, prefIcon(p.id)) { onEvent(NotificationsEvent.OnTogglePref(p, it)) }
                         if (i < state.prefs.lastIndex) HorizontalDivider(Modifier.padding(horizontal = 10.dp), color = DividerGray)
                     }
                 }
@@ -76,32 +78,30 @@ fun NotificationsScreen(
             if (state.templates.isEmpty()) {
                 item { EmptyContent("No tienes plantillas. Crea una para avisar a tus clientes.", icon = Icons.Outlined.ChatBubbleOutline) }
             }
-            items(state.templates, key = { it.id }) { t -> TemplateCard(t, onEdit = { onEditTemplate(t) }) }
+            items(state.templates, key = { it.id }) { t -> TemplateCard(t) { onEvent(NotificationsEvent.OnEditTemplate(t)) } }
             item {
-                SecondaryButton("NUEVA PLANTILLA", icon = Icons.Filled.Add, onClick = onNewTemplate, modifier = Modifier.fillMaxWidth())
+                SecondaryButton("NUEVA PLANTILLA", icon = Icons.Filled.Add, onClick = { onEvent(NotificationsEvent.OnNewTemplate) }, modifier = Modifier.fillMaxWidth())
             }
 
             state.lastDelivery?.let { msg ->
-                item {
-                    InfoBanner(msg, icon = Icons.Outlined.MarkChatRead, fg = InfoBlue, bg = InfoSoft, border = InfoSoft)
-                }
+                item { InfoBanner(msg, icon = Icons.Outlined.MarkChatRead, fg = InfoBlue, bg = InfoSoft, border = InfoSoft) }
             }
         }
     }
 
-    state.form?.let { TemplateEditorDialog(it, onFormChange, onFormSave, onFormDismiss) }
+    state.form?.let { TemplateEditorDialog(it, onEvent) }
 }
 
-private fun prefIcon(id: String) = when (id) {
-    "n1" -> Icons.Outlined.EventAvailable
-    "n2" -> Icons.Outlined.EventBusy
-    "n3" -> Icons.Outlined.WbSunny
-    "n4" -> Icons.Outlined.Paid
+private fun prefIcon(id: String): ImageVector = when (id) {
+    "new" -> Icons.Outlined.EventAvailable
+    "changes" -> Icons.Outlined.EventBusy
+    "daily" -> Icons.Outlined.WbSunny
+    "payments" -> Icons.Outlined.Paid
     else -> Icons.Outlined.Notifications
 }
 
 @Composable
-private fun PrefRow(p: NotificationPref, icon: androidx.compose.ui.graphics.vector.ImageVector, onToggle: (Boolean) -> Unit) {
+private fun PrefRow(p: NotificationPref, icon: ImageVector, onToggle: (Boolean) -> Unit) {
     Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         IconBadge(icon)
         Spacer(Modifier.width(12.dp))
@@ -125,7 +125,7 @@ private fun TemplateCard(t: MessageTemplate, onEdit: () -> Unit) {
                 Icon(Icons.Outlined.Edit, "Editar plantilla", tint = TurnosOrange, modifier = Modifier.size(18.dp))
             }
         }
-        Text(t.preview, style = MaterialTheme.typography.bodySmall, color = InkSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(t.body, style = MaterialTheme.typography.bodySmall, color = InkSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.Schedule, null, tint = InkMuted, modifier = Modifier.size(14.dp))
@@ -137,42 +137,40 @@ private fun TemplateCard(t: MessageTemplate, onEdit: () -> Unit) {
 }
 
 @Composable
-private fun TemplateEditorDialog(
-    form: TemplateForm,
-    onChange: (TemplateForm) -> Unit,
-    onSave: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = TurnosOrange, focusedLabelColor = TurnosOrange, cursorColor = TurnosOrange,
-    )
+private fun TemplateEditorDialog(form: TemplateForm, onEvent: (NotificationsEvent) -> Unit) {
+    val change: (TemplateForm) -> Unit = { onEvent(NotificationsEvent.OnFormChange(it)) }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { onEvent(NotificationsEvent.OnDismissForm) },
         containerColor = SurfaceWhite,
         title = { Text(if (form.isNew) "Nueva plantilla" else "Editar plantilla") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
-                    form.title, { onChange(form.copy(title = it)) }, label = { Text("Nombre") },
-                    singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth(),
+                    form.title, { change(form.copy(title = it)) }, label = { Text("Nombre") },
+                    singleLine = true, colors = turnosFieldColors(), modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
-                    form.body, { onChange(form.copy(body = it)) }, label = { Text("Mensaje") },
-                    minLines = 3, colors = fieldColors, modifier = Modifier.fillMaxWidth(),
+                    form.body, { change(form.copy(body = it)) }, label = { Text("Mensaje") },
+                    minLines = 3, colors = turnosFieldColors(), modifier = Modifier.fillMaxWidth(),
                 )
                 Text("Variables: {fecha}, {hora}, {barbero}", style = MaterialTheme.typography.bodySmall, color = InkMuted)
+                SegmentedSelector(
+                    options = listOf("WhatsApp" to "WhatsApp", "SMS" to "SMS"),
+                    selected = form.channel,
+                    onSelect = { change(form.copy(channel = it)) },
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Activa", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    TurnosSwitch(form.active) { onChange(form.copy(active = it)) }
+                    TurnosSwitch(form.active) { change(form.copy(active = it)) }
                 }
             }
         },
         confirmButton = {
-            TextButton(enabled = form.isValid, onClick = onSave) {
+            TextButton(enabled = form.isValid, onClick = { onEvent(NotificationsEvent.OnSaveForm) }) {
                 Text("Guardar", color = if (form.isValid) TurnosOrange else InkMuted)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = InkSecondary) } },
+        dismissButton = { TextButton(onClick = { onEvent(NotificationsEvent.OnDismissForm) }) { Text("Cancelar", color = InkSecondary) } },
     )
 }
 
@@ -180,29 +178,21 @@ private fun TemplateEditorDialog(
 // Previews
 // ---------------------------------------------------------------------------
 
-private val previewState = NotificationsUiState(
-    prefs = FakeDataSource.notificationPrefs,
-    templates = FakeDataSource.templates,
-    lastDelivery = "Último envío: 9 de 9 avisos entregados correctamente.",
-)
+private val sample = NotificationsState(prefs = PreviewData.notificationPrefs, templates = PreviewData.templates, isLoading = false)
 
 @Composable
-private fun NotificationsPreviewHost(state: NotificationsUiState) = TurnosTheme {
-    NotificationsScreen(state, {}, { _, _ -> }, {}, {}, {}, {}, {})
-}
+private fun Host(state: NotificationsState) = TurnosTheme { NotificationsScreen(state) {} }
 
 @Preview(showBackground = true, heightDp = 1000, name = "Notificaciones - configuradas")
 @Composable
-private fun NotificationsPreview() = NotificationsPreviewHost(previewState)
+private fun NotificationsPreview() = Host(sample)
 
 @Preview(showBackground = true, name = "Notificaciones - sin plantillas")
 @Composable
-private fun NotificationsEmptyPreview() = NotificationsPreviewHost(
-    previewState.copy(templates = emptyList(), lastDelivery = null),
-)
+private fun NotificationsEmptyPreview() = Host(sample.copy(templates = emptyList(), lastDelivery = null))
 
 @Preview(showBackground = true, name = "Notificaciones - editando plantilla")
 @Composable
-private fun NotificationsEditPreview() = NotificationsPreviewHost(
-    previewState.copy(form = TemplateForm("m2", "Recordatorio de cita", "Te esperamos mañana a las {hora} con {barbero}.")),
+private fun NotificationsEditPreview() = Host(
+    sample.copy(form = TemplateForm(2, "Recordatorio de cita", "Te esperamos mañana a las {hora} con {barbero}.", "24 h antes")),
 )

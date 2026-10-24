@@ -1,21 +1,41 @@
 package com.example.turnos.navigation
 
-/** Destinos de navegación. Separados por rol: cliente y negocio (administrador). */
-object Destinations {
-    const val LOGIN = "login"
+import kotlinx.serialization.Serializable
 
-    // Cliente
-    const val CATALOG = "catalog"
-    const val BOOKING = "booking/{serviceId}"
-    fun booking(serviceId: String) = "booking/$serviceId"
-    const val CLIENT_HISTORY = "client_history"
+/*
+ * Navegación type-safe: cada destino es un objeto/clase @Serializable.
+ * Entre pantallas solo viajan IDs; cada ViewModel carga el resto desde Room.
+ */
 
-    // Negocio
-    const val MY_BUSINESS = "my_business"
-    const val SERVICES = "services"
-    const val AVAILABILITY = "availability"
-    const val TEAM = "team"
-    const val BUSINESS_HISTORY = "business_history"
-    const val PAYMENTS = "payments"
-    const val NOTIFICATIONS = "notifications"
-}
+// ----- Grafos anidados -----
+@Serializable data object AuthGraph
+@Serializable data object ClientGraph
+@Serializable data object BusinessGraph
+
+// ----- Autenticación -----
+@Serializable data object LoginDestination
+@Serializable data object RegisterDestination
+
+// ----- Cliente -----
+@Serializable data object CatalogDestination
+
+/**
+ * @param serviceId servicio a reservar.
+ * @param rescheduleAppointmentId cita a reprogramar; -1 = reserva nueva.
+ */
+@Serializable data class BookingDestination(
+    val serviceId: Long,
+    val rescheduleAppointmentId: Long = -1L,
+)
+
+// ----- Compartido -----
+/** El mismo historial sirve al cliente (sus citas) y al negocio (toda la agenda). */
+@Serializable data class HistoryDestination(val asBusiness: Boolean)
+
+// ----- Negocio -----
+@Serializable data object BusinessHomeDestination
+@Serializable data object ServicesDestination
+@Serializable data object AvailabilityDestination
+@Serializable data object TeamDestination
+@Serializable data object PaymentsDestination
+@Serializable data object NotificationsDestination

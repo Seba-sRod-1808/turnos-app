@@ -36,7 +36,7 @@ class TeamViewModel(private val repository: BarberRepository) : ViewModel() {
                 repository.setStatus(event.barber.id, next)
             }
             TeamEvent.OnMessageShown -> _state.update { it.copy(userMessage = null) }
-            is TeamEvent.OnViewAgendaClick, TeamEvent.OnBackClick -> Unit // navegación
+            is TeamEvent.OnViewAgendaClick, TeamEvent.OnBackClick -> Unit
         }
     }
 

@@ -30,6 +30,11 @@ import com.example.turnos.data.source.FakeDataSource
 import com.example.turnos.ui.components.*
 import com.example.turnos.ui.theme.*
 
+/**
+ * El mapa es solo un espacio reservado (una "sombra").
+ * TODO: reemplazar por Google Maps (maps-compose) cuando se integre la API.
+ */
+
 data class BookingUiState(
     val service: Service? = null,
     val barber: Barber? = null,
@@ -97,7 +102,6 @@ fun BookingConfirmationScreen(
                 )
             }
 
-            // ---------- Sumario ----------
             TurnosCard {
                 Text("Sumario", style = MaterialTheme.typography.titleSmall, color = Ink)
                 Spacer(Modifier.height(12.dp))
@@ -118,7 +122,6 @@ fun BookingConfirmationScreen(
                 LabelValue("Fecha", state.dateLabel)
             }
 
-            // ---------- Fecha y hora ----------
             TurnosCard {
                 Text("Fecha y hora", style = MaterialTheme.typography.titleSmall, color = Ink)
                 Spacer(Modifier.height(12.dp))
@@ -141,7 +144,6 @@ fun BookingConfirmationScreen(
                 )
             }
 
-            // ---------- Mapa ----------
             TurnosCard {
                 Text("Mapa", style = MaterialTheme.typography.titleSmall, color = Ink)
                 Spacer(Modifier.height(12.dp))
@@ -154,7 +156,6 @@ fun BookingConfirmationScreen(
                 )
             }
 
-            // ---------- Estado ----------
             TurnosCard {
                 Text("Estado", style = MaterialTheme.typography.titleSmall, color = Ink)
                 Spacer(Modifier.height(10.dp))
@@ -201,7 +202,6 @@ private fun SelectChip(label: String, selected: Boolean, enabled: Boolean = true
     }
 }
 
-/** Rejilla de horarios: ocupados y bloqueados se muestran deshabilitados. */
 @Composable
 private fun SlotGrid(slots: List<TimeSlot>, selected: String?, enabled: Boolean, onSelect: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -242,18 +242,10 @@ private fun SlotGrid(slots: List<TimeSlot>, selected: String?, enabled: Boolean,
     }
 }
 
-/**
- * Espacio reservado para el mapa (solo una "sombra").
- * TODO: reemplazar por Google Maps (maps-compose) cuando se integre la API.
- */
 @Composable
 fun MapPlaceholder(modifier: Modifier = Modifier) {
     Box(modifier.clip(MaterialTheme.shapes.small).background(NeutralSoft))
 }
-
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
 
 private val previewState = BookingUiState(
     service = FakeDataSource.services.first(),

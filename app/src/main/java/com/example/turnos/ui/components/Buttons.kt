@@ -50,7 +50,6 @@ fun SecondaryButton(
     }
 }
 
-/** Botón gris neutro (ej. "Cancelar", "Gestionar"). */
 @Composable
 fun NeutralButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     OutlinedButton(

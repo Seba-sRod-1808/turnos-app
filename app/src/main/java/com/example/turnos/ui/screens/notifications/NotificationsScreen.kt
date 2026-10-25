@@ -174,10 +174,6 @@ private fun TemplateEditorDialog(form: TemplateForm, onEvent: (NotificationsEven
     )
 }
 
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
-
 private val sample = NotificationsState(prefs = PreviewData.notificationPrefs, templates = PreviewData.templates, isLoading = false)
 
 @Composable

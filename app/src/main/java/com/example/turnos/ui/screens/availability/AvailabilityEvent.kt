@@ -14,6 +14,5 @@ sealed interface AvailabilityEvent {
     data object OnRetryHolidays : AvailabilityEvent
     data object OnMessageShown : AvailabilityEvent
 
-    /** Solo navegación: lo resuelve la Route. */
     data object OnBackClick : AvailabilityEvent
 }

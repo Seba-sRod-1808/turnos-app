@@ -2,9 +2,13 @@ package com.example.turnos.ui.screens.services
 
 import com.example.turnos.data.model.Service
 
-/** Campos del formulario para agregar / editar un servicio. */
+/**
+ * Campos del formulario para agregar / editar un servicio (id = 0 es servicio nuevo).
+ * El formulario abierto es null cuando el diálogo está cerrado.
+ */
+
 data class ServiceForm(
-    val id: Long = 0, // 0 = servicio nuevo
+    val id: Long = 0,
     val name: String = "",
     val description: String = "",
     val duration: String = "30",
@@ -20,7 +24,6 @@ data class ServicesState(
     val services: List<Service> = emptyList(),
     val isSearching: Boolean = false,
     val query: String = "",
-    /** Formulario abierto; null = diálogo cerrado. */
     val form: ServiceForm? = null,
     val isLoading: Boolean = true,
     val userMessage: String? = null,

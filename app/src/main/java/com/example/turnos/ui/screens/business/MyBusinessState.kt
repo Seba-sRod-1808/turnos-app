@@ -6,7 +6,6 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.turnos.data.model.BusinessProfile
 
-/** Secciones del panel de administración (cada una navega a su pantalla). */
 enum class AdminSection(val label: String, val icon: ImageVector) {
     SERVICES("Servicios y Precios", Icons.Outlined.ContentCut),
     AVAILABILITY("Horarios y Disponibilidad", Icons.Outlined.Schedule),

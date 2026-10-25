@@ -7,6 +7,5 @@ sealed interface PaymentsEvent {
     data object OnConfigureDepositClick : PaymentsEvent
     data object OnMessageShown : PaymentsEvent
 
-    /** Solo navegación: lo resuelve la Route. */
     data object OnBackClick : PaymentsEvent
 }

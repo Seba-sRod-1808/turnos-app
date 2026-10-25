@@ -164,10 +164,6 @@ private fun RevenueCard(s: RevenueSummary) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
-
 private val sample = PaymentsState(
     summary = RevenueSummary("junio", 4860, 12, 34, 1420),
     methods = PreviewData.paymentMethods,

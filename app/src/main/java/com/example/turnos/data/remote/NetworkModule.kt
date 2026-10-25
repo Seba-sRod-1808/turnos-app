@@ -7,7 +7,10 @@ import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
 
-/** Construye el cliente HTTP y las interfaces de Retrofit. */
+/**
+ * Construye el cliente HTTP y las interfaces de Retrofit.
+ */
+
 object NetworkModule {
 
     private val json = Json {

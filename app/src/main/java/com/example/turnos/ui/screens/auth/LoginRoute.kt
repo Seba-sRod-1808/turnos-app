@@ -8,8 +8,10 @@ import kotlinx.coroutines.launch
 
 /**
  * Route del login: maneja el estado y accede a la fuente de datos fake.
+ * El delay simula la llamada al servidor.
  * Credenciales de prueba: demo@turnos.com / 123456
  */
+
 @Composable
 fun LoginRoute(onLoginSuccess: (UserRole) -> Unit = {}) {
     var state by remember { mutableStateOf(LoginUiState()) }
@@ -24,7 +26,7 @@ fun LoginRoute(onLoginSuccess: (UserRole) -> Unit = {}) {
                 state = state.copy(emailError = "Ingresa un correo válido", errorMessage = null)
             else -> scope.launch {
                 state = state.copy(isLoading = true, emailError = null, errorMessage = null)
-                delay(800) // simula la llamada al servidor
+                delay(800)
                 if (FakeDataSource.login(email, state.password)) {
                     state = state.copy(isLoading = false)
                     onLoginSuccess(state.role)
@@ -42,7 +44,7 @@ fun LoginRoute(onLoginSuccess: (UserRole) -> Unit = {}) {
         onTogglePasswordVisibility = { state = state.copy(passwordVisible = !state.passwordVisible) },
         onRoleChange = { state = state.copy(role = it) },
         onLoginClick = { submit() },
-        onGoogleClick = { onLoginSuccess(state.role) }, // TODO: Google Sign-In real
+        onGoogleClick = { onLoginSuccess(state.role) },
         onForgotPasswordClick = { },
         onCreateAccountClick = { },
     )

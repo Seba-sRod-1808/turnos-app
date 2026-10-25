@@ -26,7 +26,6 @@ fun HistoryRoute(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    /** Mueve una cita de "próximas" a "pasadas" con el nuevo estado. */
     fun close(a: Appointment, status: AppointmentStatus) {
         state = state.copy(
             upcoming = state.upcoming - a,

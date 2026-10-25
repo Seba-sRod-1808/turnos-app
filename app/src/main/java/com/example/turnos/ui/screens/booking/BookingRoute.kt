@@ -6,6 +6,11 @@ import com.example.turnos.data.source.FakeDataSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * El delay simula la llamada al servidor.
+ * Horarios fake por día: el sábado (índice 5) está lleno para poder ver el estado "sin horarios" en la app.
+ */
+
 @Composable
 fun BookingRoute(
     serviceId: String = FakeDataSource.services.first().id,
@@ -36,7 +41,7 @@ fun BookingRoute(
         onConfirm = {
             scope.launch {
                 state = state.copy(isConfirming = true)
-                delay(800) // simula la llamada al servidor
+                delay(800)
                 state = state.copy(isConfirming = false, isConfirmed = true)
             }
         },
@@ -44,10 +49,6 @@ fun BookingRoute(
     )
 }
 
-/**
- * Horarios fake por día: el sábado (índice 5) está lleno para poder
- * ver el estado "sin horarios" en la app.
- */
 private fun slotsForDay(dayIndex: Int) =
     if (dayIndex == 5) FakeDataSource.previewSlots.map { it.copy(state = SlotState.OCCUPIED) }
     else FakeDataSource.previewSlots

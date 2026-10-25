@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+/**
+ * Vista previa de hoy calculada con las mismas reglas que ve el cliente.
+ * El bloqueo manual de un slot de hoy se guarda al instante; los ocupados por citas no se tocan.
+ * Regla: un bloque debe terminar después de empezar y no traslaparse con otro.
+ */
+
 class AvailabilityViewModel(
     private val availabilityRepository: AvailabilityRepository,
     private val appointmentRepository: AppointmentRepository,
@@ -25,7 +31,6 @@ class AvailabilityViewModel(
 
     private val today: LocalDate = LocalDate.now()
 
-    // Datos de hoy para la vista previa (se actualizan solos desde Room).
     private var todayAppointments: List<Appointment> = emptyList()
     private var todayBlocked: Set<Int> = emptySet()
 
@@ -55,7 +60,7 @@ class AvailabilityViewModel(
             AvailabilityEvent.OnSaveClick -> save()
             AvailabilityEvent.OnRetryHolidays -> loadHolidays()
             AvailabilityEvent.OnMessageShown -> _state.update { it.copy(userMessage = null) }
-            AvailabilityEvent.OnBackClick -> Unit // navegación
+            AvailabilityEvent.OnBackClick -> Unit
         }
     }
 
@@ -79,7 +84,6 @@ class AvailabilityViewModel(
             .launchIn(viewModelScope)
     }
 
-    /** Vista previa de hoy calculada con las mismas reglas que ve el cliente. */
     private fun refreshPreview() {
         val slots = BusinessRules.computeSlots(
             date = today,
@@ -87,12 +91,11 @@ class AvailabilityViewModel(
             blocks = _state.value.blocks,
             busy = todayAppointments,
             blockedStarts = todayBlocked,
-            now = today.atStartOfDay(), // el admin ve el día completo
+            now = today.atStartOfDay(),
         )
         _state.update { it.copy(todaySlots = slots) }
     }
 
-    /** Regla: el bloque debe terminar después de empezar y no traslaparse con otro. */
     private fun confirmBlock() {
         val form = _state.value.blockForm ?: return
         val error = when {
@@ -116,7 +119,6 @@ class AvailabilityViewModel(
         refreshPreview()
     }
 
-    /** Bloqueo manual de un slot de hoy (se guarda al instante). Los ocupados por citas no se tocan. */
     private fun toggleSlot(start: Int) {
         val slot = _state.value.todaySlots.firstOrNull { it.startMinutes == start } ?: return
         if (slot.state == SlotState.OCCUPIED) return

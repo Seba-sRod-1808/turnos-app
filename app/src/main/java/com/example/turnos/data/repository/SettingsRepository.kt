@@ -9,10 +9,14 @@ import com.example.turnos.data.model.PaymentMethod
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-/** Configuración del negocio: perfil, pagos, notificaciones y plantillas. */
+/**
+ * Configuración del negocio: perfil, pagos, notificaciones y plantillas.
+ * El perfil del local es fijo para esta fase (un solo negocio).
+ * Al guardar, id = 0 inserta y cualquier otro id actualiza.
+ */
+
 class SettingsRepository(private val dao: SettingsDao) {
 
-    /** Perfil fijo del local para esta fase (un solo negocio). */
     val businessProfile = BusinessProfile(
         name = "Barbería El Clásico",
         address = "5ta Avenida 12-45, Zona 1",
@@ -32,7 +36,6 @@ class SettingsRepository(private val dao: SettingsDao) {
     fun observeTemplates(): Flow<List<MessageTemplate>> =
         dao.observeTemplates().map { list -> list.map { it.toModel() } }
 
-    /** id = 0 inserta; cualquier otro id actualiza. */
     suspend fun saveTemplate(template: MessageTemplate) {
         dao.upsertTemplate(template.toEntity())
     }

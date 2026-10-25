@@ -16,7 +16,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.turnos.ui.theme.*
 
-/** Estados genéricos de una pantalla que carga datos. */
+/**
+ * Estados genéricos de una pantalla que carga datos.
+ * UserMessageEffect muestra un mensaje de una sola vez (snackbar) que viene en el State
+ * y avisa con onShown para que el ViewModel lo limpie.
+ */
+
 @Composable
 fun LoadingContent(modifier: Modifier = Modifier, message: String = "Cargando…") {
     Column(
@@ -65,7 +70,6 @@ fun ErrorContent(
     }
 }
 
-/** Banner rojo para errores de validación o de negocio. */
 @Composable
 fun ErrorBanner(message: String, modifier: Modifier = Modifier) {
     InfoBanner(
@@ -78,10 +82,6 @@ fun ErrorBanner(message: String, modifier: Modifier = Modifier) {
     )
 }
 
-/**
- * Muestra un mensaje "de una sola vez" (snackbar) que viene en el State.
- * Al terminar avisa con [onShown] para que el ViewModel lo limpie del estado.
- */
 @Composable
 fun UserMessageEffect(message: String?, snackbarHostState: SnackbarHostState, onShown: () -> Unit) {
     LaunchedEffect(message) {

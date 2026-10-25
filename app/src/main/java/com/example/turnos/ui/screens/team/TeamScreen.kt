@@ -156,10 +156,6 @@ private fun BarberFormDialog(form: BarberForm, onEvent: (TeamEvent) -> Unit) {
     )
 }
 
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
-
 @Composable
 private fun Host(state: TeamState) = TurnosTheme { TeamScreen(state) {} }
 

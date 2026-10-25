@@ -46,7 +46,6 @@ fun MyBusinessRoute(
     }
 }
 
-/** Panel principal del administrador del negocio. */
 @Composable
 fun MyBusinessScreen(
     state: MyBusinessState,
@@ -102,10 +101,6 @@ fun MyBusinessScreen(
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
 
 @Composable
 private fun Host(state: MyBusinessState) = TurnosTheme { MyBusinessScreen(state) {} }

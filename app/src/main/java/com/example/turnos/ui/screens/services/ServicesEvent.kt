@@ -14,6 +14,5 @@ sealed interface ServicesEvent {
     data object OnDismissForm : ServicesEvent
     data object OnMessageShown : ServicesEvent
 
-    /** Solo navegación: lo resuelve la Route. */
     data object OnBackClick : ServicesEvent
 }

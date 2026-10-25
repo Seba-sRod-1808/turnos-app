@@ -14,6 +14,7 @@ import com.example.turnos.TurnosApp
  *
  * Uso: `val vm = turnosViewModel { handle -> BookingViewModel(handle, appointmentRepository, …) }`
  */
+
 @Composable
 inline fun <reified VM : ViewModel> turnosViewModel(
     crossinline create: AppContainer.(SavedStateHandle) -> VM,

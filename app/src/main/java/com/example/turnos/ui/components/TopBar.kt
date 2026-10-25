@@ -17,6 +17,7 @@ import com.example.turnos.ui.theme.*
  * Barra superior de los diseños: blanca, título en negrita, flecha de regreso
  * (o tijeras de marca en pantallas raíz) y acciones en naranja a la derecha.
  */
+
 @Composable
 fun TurnosTopBar(
     title: String,
@@ -50,7 +51,6 @@ fun TurnosTopBar(
     }
 }
 
-/** Scaffold estándar: top bar + fondo gris claro + barra inferior opcional. */
 @Composable
 fun TurnosScaffold(
     title: String,
@@ -71,7 +71,6 @@ fun TurnosScaffold(
     )
 }
 
-/** Contenedor para un botón fijo abajo (ej. "GUARDAR CONFIGURACIÓN"). */
 @Composable
 fun BottomActionBar(content: @Composable () -> Unit) {
     Surface(color = SurfaceWhite, shadowElevation = 8.dp) {

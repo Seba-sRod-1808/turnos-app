@@ -9,10 +9,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 
-/** Horario semanal del negocio + bloqueos manuales. */
+/**
+ * Horario semanal del negocio + bloqueos manuales.
+ * Los días se indexan 0 = lunes … 6 = domingo.
+ */
+
 class AvailabilityRepository(private val dao: AvailabilityDao) {
 
-    /** 7 valores, índice 0 = lunes … 6 = domingo. */
     fun observeWorkDays(): Flow<List<Boolean>> = dao.observeWorkDays().map { it.toWeek() }
 
     fun observeBlocks(): Flow<List<TimeBlock>> = dao.observeBlocks().map { list -> list.map { it.toModel() } }

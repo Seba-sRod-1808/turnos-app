@@ -11,29 +11,26 @@ import java.time.LocalDateTime
 /**
  * Reglas de negocio del documento del proyecto, en Kotlin puro (sin Android),
  * para que sean fáciles de leer y de probar con tests unitarios.
+ *
+ * Un slot está disponible si:
+ *  1. cae dentro de un bloque de horario configurado (y el servicio cabe completo),
+ *  2. no se traslapa con otra cita activa,
+ *  3. no cae en un bloqueo manual,
+ *  4. no está en el pasado.
+ * La duración del servicio determina cuántos slots consecutivos ocupa.
+ * Cancelar con menos de 2 horas de anticipación se marca como cancelación tardía.
  */
+
 object BusinessRules {
 
-    /** Cada slot de la agenda dura 30 minutos. */
     const val SLOT_STEP_MIN = 30
 
-    /** Cancelar con menos de 2 horas se marca como "cancelación tardía". */
     const val LATE_CANCELLATION_HOURS = 2L
 
-    /** País para la API de feriados. */
     const val COUNTRY_CODE = "GT"
 
-    /** Días que el cliente puede ver hacia adelante para reservar. */
     const val BOOKING_WINDOW_DAYS = 14
 
-    /**
-     * Regla: un slot está disponible si
-     *  1. cae dentro de un bloque de horario configurado (y el servicio cabe completo),
-     *  2. no se traslapa con otra cita activa,
-     *  3. no cae en un bloqueo manual,
-     *  4. no está en el pasado.
-     * La duración del servicio determina cuántos slots consecutivos ocupa.
-     */
     fun computeSlots(
         date: LocalDate,
         durationMin: Int,
@@ -49,8 +46,8 @@ object BusinessRules {
         val active = busy.filter { it.isActive && it.id != ignoreAppointmentId }
         return blocks.sortedBy { it.startMinutes }.flatMap { block ->
             (block.startMinutes until block.endMinutes step SLOT_STEP_MIN)
-                .filter { start -> start + durationMin <= block.endMinutes } // el servicio cabe en el bloque
-                .filter { start -> start > nowMinutes }                       // no ofrecer horas pasadas
+                .filter { start -> start + durationMin <= block.endMinutes }
+                .filter { start -> start > nowMinutes }
                 .map { start ->
                     val end = start + durationMin
                     val state = when {
@@ -64,7 +61,6 @@ object BusinessRules {
         }
     }
 
-    /** Regla: un cliente no puede tener dos citas activas que se traslapen. */
     fun clientHasOverlap(
         clientAppointments: List<Appointment>,
         date: LocalDate,
@@ -76,7 +72,6 @@ object BusinessRules {
             overlaps(start, start + durationMin, it.startMinutes, it.endMinutes)
     }
 
-    /** Regla: cancelación con menos del mínimo de anticipación = tardía. */
     fun isLateCancellation(appointment: Appointment, now: LocalDateTime = LocalDateTime.now()): Boolean =
         Duration.between(now, appointment.startDateTime).toHours() < LATE_CANCELLATION_HOURS
 

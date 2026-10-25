@@ -7,10 +7,13 @@ import com.example.turnos.data.model.User
 import com.example.turnos.data.model.UserRole
 import com.example.turnos.util.PasswordHasher
 
+/**
+ * Autenticación contra la tabla local de usuarios (Room).
+ */
+
 class InvalidCredentialsException : Exception("Correo o contraseña incorrectos.")
 class EmailAlreadyUsedException : Exception("Ya existe una cuenta con ese correo.")
 
-/** Autenticación contra la tabla local de usuarios (Room). */
 class AuthRepository(
     private val userDao: UserDao,
     private val session: SessionRepository,

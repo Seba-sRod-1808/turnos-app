@@ -126,7 +126,6 @@ private fun ServiceCard(service: Service, onReserve: () -> Unit) {
     }
 }
 
-/** Navegación inferior del cliente (compartida con Historial). */
 @Composable
 fun ClientBottomBar(
     selected: Int,
@@ -156,10 +155,6 @@ fun ClientBottomBar(
         )
     }
 }
-
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
 
 private val previewState = CatalogUiState(
     businessName = FakeDataSource.business.name,

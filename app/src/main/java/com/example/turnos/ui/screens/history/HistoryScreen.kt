@@ -21,6 +21,12 @@ import com.example.turnos.ui.components.*
 import com.example.turnos.ui.screens.catalog.ClientBottomBar
 import com.example.turnos.ui.theme.*
 
+/**
+ * Historial de citas. La misma pantalla sirve a ambos roles:
+ *  - Cliente: puede cancelar o reprogramar.
+ *  - Negocio: puede marcar como completada o no presente.
+ */
+
 enum class HistoryTab { UPCOMING, PAST }
 
 data class HistoryUiState(
@@ -28,16 +34,10 @@ data class HistoryUiState(
     val selectedTab: HistoryTab = HistoryTab.UPCOMING,
     val upcoming: List<Appointment> = emptyList(),
     val past: List<Appointment> = emptyList(),
-    /** Cita pendiente de confirmar su cancelación (muestra el diálogo). */
     val appointmentToCancel: Appointment? = null,
     val isLoading: Boolean = false,
 )
 
-/**
- * Historial de citas. La misma pantalla sirve a ambos roles:
- * - Cliente: puede cancelar o reprogramar.
- * - Negocio: puede marcar como completada o no presente.
- */
 @Composable
 fun HistoryScreen(
     state: HistoryUiState,
@@ -178,10 +178,6 @@ private fun AppointmentCard(
 private fun Overline(text: String, modifier: Modifier = Modifier) {
     Text(text.uppercase(), style = MaterialTheme.typography.labelMedium, color = InkSecondary, modifier = modifier)
 }
-
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
 
 private val previewState = HistoryUiState(upcoming = FakeDataSource.upcoming, past = FakeDataSource.past)
 

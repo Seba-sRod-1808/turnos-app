@@ -24,7 +24,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.turnos.ui.theme.*
 
-/** Logo: silla de barbero + tijeras. */
 @Composable
 fun BrandMark(modifier: Modifier = Modifier, size: Int = 112) {
     Box(
@@ -39,7 +38,6 @@ fun BrandMark(modifier: Modifier = Modifier, size: Int = 112) {
     }
 }
 
-/** Campo de texto con etiqueta arriba, como en los diseños. */
 @Composable
 fun LabeledTextField(
     label: String,
@@ -76,7 +74,6 @@ fun LabeledTextField(
     }
 }
 
-/** Campo de contraseña con botón de mostrar/ocultar. */
 @Composable
 fun PasswordField(
     label: String,
@@ -119,7 +116,6 @@ fun PasswordField(
     }
 }
 
-/** Selector segmentado de dos opciones (ej. "Soy cliente / Soy negocio"). */
 @Composable
 fun <T> SegmentedSelector(
     options: List<Pair<T, String>>,
@@ -161,7 +157,6 @@ fun TextLink(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     )
 }
 
-/** Botón principal que se convierte en spinner mientras carga. */
 @Composable
 fun LoadingPrimaryButton(text: String, isLoading: Boolean, onClick: () -> Unit, enabled: Boolean = true) {
     if (isLoading) {

@@ -32,7 +32,6 @@ val TurnosShapes = Shapes(
     large = RoundedCornerShape(16.dp),
 )
 
-/** El diseño es solo claro: la app fuerza el esquema claro. */
 @Composable
 fun TurnosTheme(content: @Composable () -> Unit) {
     MaterialTheme(

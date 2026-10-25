@@ -6,6 +6,7 @@ import java.time.LocalDate
 /**
  * Datos de ejemplo SOLO para los @Preview (la app real lee de Room).
  */
+
 object PreviewData {
     private val today: LocalDate = LocalDate.of(2026, 6, 15)
 

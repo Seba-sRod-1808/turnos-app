@@ -10,11 +10,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import java.time.LocalDate
 
+/**
+ * El barbero asignado a una reserva nueva es el primero que no está ausente.
+ */
+
 class BarberRepository(
     private val barberDao: BarberDao,
     private val appointmentDao: AppointmentDao,
 ) {
-    /** Equipo con la cantidad de citas activas de hoy por barbero. */
     fun observeTeam(today: LocalDate = LocalDate.now()): Flow<List<Barber>> =
         combine(barberDao.observeAll(), appointmentDao.observeAll()) { barbers, appointments ->
             val todayActive = appointments.filter {
@@ -32,6 +35,5 @@ class BarberRepository(
 
     suspend fun setStatus(id: Long, status: BarberStatus) = barberDao.updateStatus(id, status.name)
 
-    /** Barbero que se asigna a una reserva nueva (el primero que no está ausente). */
     suspend fun firstAvailableName(): String = barberDao.firstAvailable()?.name ?: "Por asignar"
 }

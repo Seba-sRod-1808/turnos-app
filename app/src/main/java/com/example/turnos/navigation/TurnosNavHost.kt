@@ -21,6 +21,12 @@ import com.example.turnos.ui.screens.register.RegisterRoute
 import com.example.turnos.ui.screens.services.ServicesRoute
 import com.example.turnos.ui.screens.team.TeamRoute
 
+/**
+ * Grafo de navegación. HistoryDestination se registra una sola vez (en el grafo del cliente)
+ * y es accesible desde cualquier grafo; el argumento asBusiness decide qué ve.
+ * Al abrir la agenda desde una reserva, la reserva sale del back stack.
+ */
+
 @Composable
 fun TurnosNavHost(navController: NavHostController = rememberNavController()) {
     NavHost(navController = navController, startDestination = AuthGraph) {
@@ -29,10 +35,6 @@ fun TurnosNavHost(navController: NavHostController = rememberNavController()) {
         businessGraph(navController)
     }
 }
-
-// ---------------------------------------------------------------------------
-// Autenticación
-// ---------------------------------------------------------------------------
 
 private fun NavGraphBuilder.authGraph(navController: NavHostController) {
     navigation<AuthGraph>(startDestination = LoginDestination) {
@@ -51,10 +53,6 @@ private fun NavGraphBuilder.authGraph(navController: NavHostController) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Cliente
-// ---------------------------------------------------------------------------
-
 private fun NavGraphBuilder.clientGraph(navController: NavHostController) {
     navigation<ClientGraph>(startDestination = CatalogDestination) {
         composable<CatalogDestination> {
@@ -70,7 +68,6 @@ private fun NavGraphBuilder.clientGraph(navController: NavHostController) {
             BookingRoute(
                 onBack = { navController.popBackStack() },
                 onViewAgenda = {
-                    // Al ver la agenda, la reserva sale del back stack.
                     navController.navigate(HistoryDestination(asBusiness = false)) {
                         popUpTo<CatalogDestination>()
                         launchSingleTop = true
@@ -96,10 +93,6 @@ private fun NavGraphBuilder.clientGraph(navController: NavHostController) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Negocio
-// ---------------------------------------------------------------------------
-
 private fun NavGraphBuilder.businessGraph(navController: NavHostController) {
     val back: () -> Unit = { navController.popBackStack() }
 
@@ -120,12 +113,9 @@ private fun NavGraphBuilder.businessGraph(navController: NavHostController) {
         }
         composable<PaymentsDestination> { PaymentsRoute(onBack = back) }
         composable<NotificationsDestination> { NotificationsRoute(onBack = back) }
-        // HistoryDestination se registra una sola vez (en el grafo del cliente) y
-        // es accesible desde cualquier grafo; el argumento asBusiness decide qué ve.
     }
 }
 
-/** Cada sección del panel apunta a su destino type-safe. */
 private fun AdminSection.destination(): Any = when (this) {
     AdminSection.SERVICES -> ServicesDestination
     AdminSection.AVAILABILITY -> AvailabilityDestination
@@ -135,7 +125,6 @@ private fun AdminSection.destination(): Any = when (this) {
     AdminSection.NOTIFICATIONS -> NotificationsDestination
 }
 
-/** Entra al inicio según el rol y saca la autenticación del back stack. */
 private fun NavHostController.navigateToHome(role: UserRole) {
     val graph: Any = if (role == UserRole.BUSINESS) BusinessGraph else ClientGraph
     navigate(graph) {
@@ -144,7 +133,6 @@ private fun NavHostController.navigateToHome(role: UserRole) {
     }
 }
 
-/** Cierra sesión: limpia todo el back stack y vuelve al login. */
 private fun NavHostController.logout() {
     navigate(AuthGraph) {
         popUpTo(graph.id) { inclusive = true }

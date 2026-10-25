@@ -1,6 +1,9 @@
 package com.example.turnos.util
 
-/** Validaciones de formularios (Kotlin puro, sin dependencias de Android). */
+/**
+ * Validaciones de formularios (Kotlin puro, sin dependencias de Android).
+ */
+
 object Validators {
     private val emailRegex = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 

@@ -10,6 +10,11 @@ import java.time.LocalDate
  * Tablas de Room. Los enums se guardan como String (su .name) y las fechas
  * como texto ISO (yyyy-MM-dd) para no necesitar TypeConverters.
  * Cada entidad trae su mapper toModel() hacia el modelo de dominio.
+ *
+ * La cita guarda nombre del servicio, barbero y precio "congelados" al reservar:
+ * si el negocio cambia el precio después, el historial no se altera.
+ * dayOfWeek de los días laborables usa java.time: 1 = lunes … 7 = domingo.
+ * Un bloqueo manual aplica a un horario puntual: un slot bloqueado no se ofrece.
  */
 
 @Entity(tableName = "users", indices = [Index(value = ["email"], unique = true)])
@@ -50,10 +55,6 @@ data class BarberEntity(
         Barber(id, name, role, rating, BarberStatus.valueOf(status), schedule, appointmentsToday)
 }
 
-/**
- * Guardamos nombre del servicio, barbero y precio "congelados" al reservar:
- * si el negocio cambia el precio después, el historial no se altera.
- */
 @Entity(tableName = "appointments", indices = [Index("date"), Index("clientId")])
 data class AppointmentEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -85,7 +86,6 @@ data class AppointmentEntity(
     )
 }
 
-/** Día de la semana laborable. dayOfWeek usa java.time: 1 = lunes … 7 = domingo. */
 @Entity(tableName = "work_days")
 data class WorkDayEntity(
     @PrimaryKey val dayOfWeek: Int,
@@ -101,7 +101,6 @@ data class TimeBlockEntity(
     fun toModel() = TimeBlock(id, startMinutes, endMinutes)
 }
 
-/** Bloqueo manual de un horario puntual (regla: un slot bloqueado no se ofrece). */
 @Entity(tableName = "blocked_slots", primaryKeys = ["date", "startMinutes"])
 data class BlockedSlotEntity(
     val date: String,
@@ -143,7 +142,6 @@ data class MessageTemplateEntity(
 
 fun MessageTemplate.toEntity() = MessageTemplateEntity(id, title, body, timing, channel, active)
 
-/** Caché local de la API de feriados (permite consultarlos sin conexión). */
 @Entity(tableName = "holidays")
 data class HolidayEntity(
     @PrimaryKey val date: String,

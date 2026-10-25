@@ -7,6 +7,7 @@ import java.security.MessageDigest
  * SHA-256 es suficiente para la demo; con un backend real se usaría su
  * propio sistema de autenticación.
  */
+
 object PasswordHasher {
     fun hash(password: String): String =
         MessageDigest.getInstance("SHA-256")

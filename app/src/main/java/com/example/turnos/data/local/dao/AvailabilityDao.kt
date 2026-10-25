@@ -11,9 +11,12 @@ import com.example.turnos.data.local.entity.TimeBlockEntity
 import com.example.turnos.data.local.entity.WorkDayEntity
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Días laborables y bloques de horario. Guardar días y bloques usa una sola transacción (todo o nada).
+ */
+
 @Dao
 interface AvailabilityDao {
-    // ----- Días laborables -----
     @Query("SELECT * FROM work_days ORDER BY dayOfWeek")
     fun observeWorkDays(): Flow<List<WorkDayEntity>>
 
@@ -23,7 +26,6 @@ interface AvailabilityDao {
     @Upsert
     suspend fun upsertWorkDays(days: List<WorkDayEntity>)
 
-    // ----- Bloques de horario -----
     @Query("SELECT * FROM time_blocks ORDER BY startMinutes")
     fun observeBlocks(): Flow<List<TimeBlockEntity>>
 
@@ -36,7 +38,6 @@ interface AvailabilityDao {
     @Insert
     suspend fun insertBlocks(blocks: List<TimeBlockEntity>)
 
-    /** Guarda días y bloques en una sola transacción (todo o nada). */
     @Transaction
     suspend fun replaceSchedule(days: List<WorkDayEntity>, blocks: List<TimeBlockEntity>) {
         upsertWorkDays(days)
@@ -44,7 +45,6 @@ interface AvailabilityDao {
         insertBlocks(blocks)
     }
 
-    // ----- Bloqueos manuales -----
     @Query("SELECT * FROM blocked_slots WHERE date = :date")
     fun observeBlockedOn(date: String): Flow<List<BlockedSlotEntity>>
 

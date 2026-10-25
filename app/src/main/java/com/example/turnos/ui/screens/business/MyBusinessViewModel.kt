@@ -10,6 +10,10 @@ import com.example.turnos.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.*
 import java.time.LocalDate
 
+/**
+ * Las estadísticas se recalculan solas cada vez que cambia una cita.
+ */
+
 class MyBusinessViewModel(
     appointmentRepository: AppointmentRepository,
     private val authRepository: AuthRepository,
@@ -23,7 +27,6 @@ class MyBusinessViewModel(
     val state: StateFlow<MyBusinessState> = _state.asStateFlow()
 
     init {
-        // Las estadísticas se recalculan solas cada vez que cambia una cita.
         appointmentRepository.observeAll()
             .onEach { all ->
                 val today = all.filter { it.date == LocalDate.now() }
@@ -51,7 +54,7 @@ class MyBusinessViewModel(
                 _state.update { it.copy(isLoggedOut = true) }
             }
             MyBusinessEvent.OnMessageShown -> _state.update { it.copy(userMessage = null) }
-            is MyBusinessEvent.OnSectionClick -> Unit // navegación
+            is MyBusinessEvent.OnSectionClick -> Unit
         }
     }
 }

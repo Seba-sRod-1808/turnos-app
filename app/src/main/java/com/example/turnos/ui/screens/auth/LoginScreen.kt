@@ -34,7 +34,6 @@ import com.example.turnos.ui.theme.*
 
 enum class UserRole { CLIENT, BUSINESS }
 
-/** Estado completo de la pantalla de login. */
 data class LoginUiState(
     val email: String = "",
     val password: String = "",
@@ -45,7 +44,6 @@ data class LoginUiState(
     val errorMessage: String? = null,
 )
 
-/** Composable stateless: solo dibuja [state] y reporta eventos. */
 @Composable
 fun LoginScreen(
     state: LoginUiState,
@@ -244,10 +242,6 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
     focusedPlaceholderColor = InkMuted,
     unfocusedPlaceholderColor = InkMuted,
 )
-
-// ---------------------------------------------------------------------------
-// Previews: una por cada estado de la pantalla
-// ---------------------------------------------------------------------------
 
 @Composable
 private fun LoginPreviewHost(state: LoginUiState) = TurnosTheme {

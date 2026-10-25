@@ -28,7 +28,6 @@ import com.example.turnos.data.model.AppointmentStatus
 import com.example.turnos.data.model.BarberStatus
 import com.example.turnos.ui.theme.*
 
-/** Tarjeta blanca con borde suave: el contenedor base de todos los diseños. */
 @Composable
 fun TurnosCard(
     modifier: Modifier = Modifier,
@@ -48,7 +47,6 @@ fun TurnosCard(
     )
 }
 
-/** Título de sección con texto secundario opcional a la derecha ("3 activos · 1 pausado"). */
 @Composable
 fun SectionHeader(title: String, trailing: String? = null, modifier: Modifier = Modifier) {
     Row(
@@ -60,7 +58,6 @@ fun SectionHeader(title: String, trailing: String? = null, modifier: Modifier = 
     }
 }
 
-/** Chip de estado en mayúsculas (CONFIRMADA, PENDIENTE, ACTIVA, PAUSADO…). */
 @Composable
 fun StatusChip(text: String, fg: Color, bg: Color, modifier: Modifier = Modifier, icon: ImageVector? = null) {
     Row(
@@ -97,7 +94,6 @@ fun BarberStatusChip(status: BarberStatus) {
     StatusChip(label, fg, bg)
 }
 
-/** Banner informativo naranja con borde (aparece arriba y abajo en varias pantallas). */
 @Composable
 fun InfoBanner(
     text: String,
@@ -122,7 +118,6 @@ fun InfoBanner(
     }
 }
 
-/** Mini tarjeta de métrica (Citas Hoy / Pendientes / Ingresos). */
 @Composable
 fun StatCard(label: String, value: String, modifier: Modifier = Modifier, valueColor: Color = Ink) {
     TurnosCard(modifier, padding = 12.dp) {
@@ -132,10 +127,6 @@ fun StatCard(label: String, value: String, modifier: Modifier = Modifier, valueC
     }
 }
 
-/**
- * Avatar circular con iniciales. Sustituye las fotos de los diseños mientras
- * no haya carga de imágenes (Coil) conectada al backend.
- */
 @Composable
 fun Avatar(name: String, size: Dp = 44.dp) {
     val initials = name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
@@ -150,7 +141,6 @@ fun Avatar(name: String, size: Dp = 44.dp) {
     }
 }
 
-/** Placeholder de foto del local / servicio con tonos cálidos tipo barbería. */
 @Composable
 fun PhotoPlaceholder(icon: ImageVector, modifier: Modifier = Modifier) {
     Box(
@@ -180,7 +170,6 @@ fun RatingStars(rating: Int, max: Int = 5, size: Dp = 14.dp) {
     }
 }
 
-/** Switch con los colores del diseño. */
 @Composable
 fun TurnosSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Switch(
@@ -197,7 +186,6 @@ fun TurnosSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     )
 }
 
-/** Ícono cuadrado con fondo naranja suave, usado en listas de ajustes. */
 @Composable
 fun IconBadge(icon: ImageVector, fg: Color = TurnosOrange, bg: Color = TurnosOrangeSoft) {
     Box(
@@ -206,7 +194,6 @@ fun IconBadge(icon: ImageVector, fg: Color = TurnosOrange, bg: Color = TurnosOra
     ) { Icon(icon, null, tint = fg, modifier = Modifier.size(20.dp)) }
 }
 
-/** Fila navegable de un menú de administración (Servicios, Horarios, …). */
 @Composable
 fun NavRow(icon: ImageVector, label: String, onClick: () -> Unit) {
     TurnosCard(onClick = onClick, padding = 14.dp) {
@@ -218,4 +205,3 @@ fun NavRow(icon: ImageVector, label: String, onClick: () -> Unit) {
         }
     }
 }
-

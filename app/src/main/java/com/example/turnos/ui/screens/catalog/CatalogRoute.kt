@@ -4,6 +4,10 @@ import androidx.compose.runtime.*
 import com.example.turnos.data.source.FakeDataSource
 import kotlinx.coroutines.delay
 
+/**
+ * Carga simulada (delay) desde la fuente de datos fake.
+ */
+
 @Composable
 fun CatalogRoute(
     onReserve: (serviceId: String) -> Unit = {},
@@ -13,7 +17,6 @@ fun CatalogRoute(
     var state by remember { mutableStateOf(CatalogUiState(isLoading = true)) }
     var reloadKey by remember { mutableIntStateOf(0) }
 
-    // Carga simulada desde la fuente de datos fake.
     LaunchedEffect(reloadKey) {
         state = state.copy(isLoading = true, errorMessage = null)
         delay(600)
@@ -42,7 +45,6 @@ fun CatalogRoute(
     )
 }
 
-/** Solo servicios activos, filtrados por nombre. */
 private fun filterServices(query: String) = FakeDataSource.services
     .filter { it.active }
     .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }

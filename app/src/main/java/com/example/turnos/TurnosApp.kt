@@ -7,6 +7,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
+/**
+ * Application: crea el AppContainer y siembra los datos de demostración la primera vez que se abre la app.
+ */
+
 class TurnosApp : Application() {
 
     lateinit var container: AppContainer
@@ -17,7 +21,6 @@ class TurnosApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
-        // Datos de demostración la primera vez que se abre la app.
         appScope.launch { container.seeder.seedIfEmpty() }
     }
 }

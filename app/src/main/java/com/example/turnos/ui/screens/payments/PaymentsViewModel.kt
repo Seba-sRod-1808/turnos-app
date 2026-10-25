@@ -13,6 +13,10 @@ import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.math.roundToInt
 
+/**
+ * Ingresos = citas completadas. Se compara el mes actual contra el anterior.
+ */
+
 class PaymentsViewModel(
     private val settingsRepository: SettingsRepository,
     appointmentRepository: AppointmentRepository,
@@ -38,11 +42,10 @@ class PaymentsViewModel(
             PaymentsEvent.OnConfigureDepositClick ->
                 _state.update { it.copy(userMessage = "El depósito automático se configurará con la pasarela de pagos.") }
             PaymentsEvent.OnMessageShown -> _state.update { it.copy(userMessage = null) }
-            PaymentsEvent.OnBackClick -> Unit // navegación
+            PaymentsEvent.OnBackClick -> Unit
         }
     }
 
-    /** Ingresos = citas completadas. Se compara el mes actual contra el anterior. */
     private fun buildSummary(appointments: List<Appointment>): RevenueSummary {
         val completed = appointments.filter { it.status == AppointmentStatus.COMPLETED }
         val thisMonth = YearMonth.now()

@@ -9,7 +9,10 @@ import com.example.turnos.data.local.entity.NotificationPrefEntity
 import com.example.turnos.data.local.entity.PaymentMethodEntity
 import kotlinx.coroutines.flow.Flow
 
-/** Configuración del negocio: métodos de pago, notificaciones y plantillas. */
+/**
+ * Configuración del negocio: métodos de pago, notificaciones y plantillas.
+ */
+
 @Dao
 interface SettingsDao {
     @Query("SELECT * FROM payment_methods")

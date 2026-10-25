@@ -13,6 +13,5 @@ sealed interface NotificationsEvent {
     data object OnSendTestClick : NotificationsEvent
     data object OnMessageShown : NotificationsEvent
 
-    /** Solo navegación: lo resuelve la Route. */
     data object OnBackClick : NotificationsEvent
 }

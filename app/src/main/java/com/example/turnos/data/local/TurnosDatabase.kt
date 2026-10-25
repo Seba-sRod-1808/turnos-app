@@ -7,6 +7,10 @@ import androidx.room.RoomDatabase
 import com.example.turnos.data.local.dao.*
 import com.example.turnos.data.local.entity.*
 
+/**
+ * Mientras el esquema cambia entre entregas, la BD se recrea en vez de migrar (dropAllTables).
+ */
+
 @Database(
     entities = [
         UserEntity::class,
@@ -36,7 +40,6 @@ abstract class TurnosDatabase : RoomDatabase() {
     companion object {
         fun build(context: Context): TurnosDatabase =
             Room.databaseBuilder(context, TurnosDatabase::class.java, "turnos.db")
-                // Mientras el esquema cambia entre entregas, recreamos la BD en vez de migrar.
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
     }

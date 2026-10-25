@@ -7,7 +7,6 @@ import com.example.turnos.data.repository.ServiceRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-/** Gestión del catálogo: agregar, editar, pausar y eliminar servicios. */
 class ServicesViewModel(private val repository: ServiceRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(ServicesState())
@@ -34,7 +33,7 @@ class ServicesViewModel(private val repository: ServiceRepository) : ViewModel()
             ServicesEvent.OnDeleteFromForm -> deleteFromForm()
             ServicesEvent.OnDismissForm -> _state.update { it.copy(form = null) }
             ServicesEvent.OnMessageShown -> _state.update { it.copy(userMessage = null) }
-            ServicesEvent.OnBackClick -> Unit // navegación
+            ServicesEvent.OnBackClick -> Unit
         }
     }
 

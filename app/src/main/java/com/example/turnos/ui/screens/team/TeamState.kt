@@ -3,6 +3,10 @@ package com.example.turnos.ui.screens.team
 import com.example.turnos.data.model.Barber
 import com.example.turnos.data.model.BarberStatus
 
+/**
+ * El formulario para agregar barbero es null cuando está cerrado.
+ */
+
 data class BarberForm(
     val name: String = "",
     val role: String = "Barbero",
@@ -14,7 +18,6 @@ data class TeamState(
     val barbers: List<Barber> = emptyList(),
     val dateLabel: String = "",
     val isLoading: Boolean = true,
-    /** Formulario para agregar barbero; null = cerrado. */
     val form: BarberForm? = null,
     val userMessage: String? = null,
 ) {

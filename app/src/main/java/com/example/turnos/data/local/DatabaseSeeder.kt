@@ -13,6 +13,7 @@ import java.time.LocalDate
  * Las fechas de las citas son relativas al día de instalación para que siempre
  * haya citas próximas y pasadas.
  */
+
 class DatabaseSeeder(private val db: TurnosDatabase) {
 
     suspend fun seedIfEmpty() {
@@ -45,7 +46,6 @@ class DatabaseSeeder(private val db: TurnosDatabase) {
                 )
             )
 
-            // Lunes a viernes activos; sábado y domingo cerrados.
             db.availabilityDao().upsertWorkDays((1..7).map { WorkDayEntity(it, active = it <= 5) })
             db.availabilityDao().insertBlocks(
                 listOf(TimeBlockEntity(startMinutes = 9 * 60, endMinutes = 12 * 60), TimeBlockEntity(startMinutes = 14 * 60, endMinutes = 18 * 60)),
@@ -57,7 +57,6 @@ class DatabaseSeeder(private val db: TurnosDatabase) {
                     appointment(clientId, "Ana López", 2, "Afeitado con Navaja", "Alex Rivera", today.plusDays(5), 10 * 60 + 30, 30, 100, AppointmentStatus.PENDING),
                     appointment(clientId, "Ana López", 1, "Corte Clásico", "Alex Rivera", today.minusDays(10), 16 * 60, 45, 150, AppointmentStatus.COMPLETED),
                     appointment(clientId, "Ana López", 3, "Arreglo de Barba", "Mateo López", today.minusDays(25), 11 * 60, 30, 90, AppointmentStatus.CANCELLED),
-                    // Citas de otros clientes: ocupan agenda y alimentan las estadísticas del negocio.
                     appointment(0, "Carlos Méndez", 4, "Corte + Barba", "Mateo López", today, 10 * 60, 70, 220, AppointmentStatus.CONFIRMED),
                     appointment(0, "Luis Pérez", 1, "Corte Clásico", "Alex Rivera", today, 15 * 60, 45, 150, AppointmentStatus.PENDING),
                     appointment(0, "Jorge Ramírez", 2, "Afeitado con Navaja", "Alex Rivera", today.minusDays(3), 9 * 60, 30, 100, AppointmentStatus.COMPLETED),

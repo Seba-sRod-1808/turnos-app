@@ -9,10 +9,13 @@ import androidx.activity.enableEdgeToEdge
 import com.example.turnos.navigation.TurnosNavHost
 import com.example.turnos.ui.theme.TurnosTheme
 
+/**
+ * Punto de entrada. La app es solo tema claro: los íconos de las barras del sistema siempre son oscuros.
+ */
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // La app es solo tema claro: íconos de barras de sistema oscuros siempre.
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(Color.WHITE, Color.WHITE),
             navigationBarStyle = SystemBarStyle.light(Color.WHITE, Color.WHITE),

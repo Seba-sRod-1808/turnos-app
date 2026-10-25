@@ -194,10 +194,6 @@ private fun EditorField(
     )
 }
 
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
-
 private val sample = ServicesState(services = PreviewData.services, isLoading = false)
 
 @Composable

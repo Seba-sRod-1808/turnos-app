@@ -35,7 +35,7 @@ class NotificationsViewModel(private val repository: SettingsRepository) : ViewM
             NotificationsEvent.OnSendTestClick ->
                 _state.update { it.copy(userMessage = "Notificación de prueba enviada (simulada).") }
             NotificationsEvent.OnMessageShown -> _state.update { it.copy(userMessage = null) }
-            NotificationsEvent.OnBackClick -> Unit // navegación
+            NotificationsEvent.OnBackClick -> Unit
         }
     }
 

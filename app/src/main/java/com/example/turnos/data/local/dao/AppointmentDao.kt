@@ -6,6 +6,10 @@ import androidx.room.Query
 import com.example.turnos.data.local.entity.AppointmentEntity
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Consultas de citas. Las que ocupan agenda son las pendientes o confirmadas.
+ */
+
 @Dao
 interface AppointmentDao {
     @Query("SELECT * FROM appointments ORDER BY date, startMinutes")
@@ -14,7 +18,6 @@ interface AppointmentDao {
     @Query("SELECT * FROM appointments WHERE clientId = :clientId ORDER BY date, startMinutes")
     fun observeForClient(clientId: Long): Flow<List<AppointmentEntity>>
 
-    /** Citas que ocupan agenda (pendientes o confirmadas) en una fecha. */
     @Query("SELECT * FROM appointments WHERE date = :date AND status IN ('PENDING', 'CONFIRMED')")
     suspend fun getActiveOn(date: String): List<AppointmentEntity>
 

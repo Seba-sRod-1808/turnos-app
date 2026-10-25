@@ -9,6 +9,9 @@ import java.time.LocalTime
 /**
  * Modelos de dominio que consume la UI. Son independientes de Room y de la API:
  * los repositorios convierten entidades / DTOs a estos modelos.
+ *
+ * Los minutos del día se expresan desde medianoche (ej. 14:00 = 840).
+ * Una cita activa bloquea su horario en la agenda.
  */
 
 enum class UserRole { CLIENT, BUSINESS }
@@ -41,7 +44,6 @@ data class Barber(
     val appointmentsToday: Int = 0,
 )
 
-/** Estados definidos en las reglas de negocio del entregable. */
 enum class AppointmentStatus { PENDING, CONFIRMED, COMPLETED, CANCELLED, NO_SHOW }
 
 data class Appointment(
@@ -52,7 +54,6 @@ data class Appointment(
     val clientId: Long,
     val clientName: String,
     val date: LocalDate,
-    /** Minutos desde medianoche (ej. 14:00 = 840). */
     val startMinutes: Int,
     val durationMin: Int,
     val price: Int,
@@ -63,7 +64,6 @@ data class Appointment(
     val endMinutes: Int get() = startMinutes + durationMin
     val dateLabel: String get() = "${formatDateLong(date)}, ${formatTime(startMinutes)}"
 
-    /** Una cita "activa" bloquea su horario en la agenda. */
     val isActive: Boolean get() = status == AppointmentStatus.PENDING || status == AppointmentStatus.CONFIRMED
 }
 
@@ -101,7 +101,6 @@ data class MessageTemplate(
     val active: Boolean,
 )
 
-/** Datos fijos del local (perfil del negocio). */
 data class BusinessProfile(
     val name: String,
     val address: String,

@@ -279,10 +279,6 @@ private fun Legend(color: Color, label: String) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
-
 private val sample = AvailabilityState(
     isLoading = false,
     workDays = listOf(true, true, true, true, true, false, false),

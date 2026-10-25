@@ -219,5 +219,3 @@ fun NavRow(icon: ImageVector, label: String, onClick: () -> Unit) {
     }
 }
 
-/** Formato de moneda en quetzales: Q1,200 */
-fun quetzales(amount: Int): String = "Q" + String.format(java.util.Locale.US, "%,d", amount)

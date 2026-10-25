@@ -6,6 +6,8 @@ import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -60,6 +62,33 @@ fun ErrorContent(
         Text(message, style = MaterialTheme.typography.bodyMedium, color = Ink, textAlign = TextAlign.Center)
         Spacer(Modifier.height(16.dp))
         SecondaryButton("REINTENTAR", onClick = onRetry, compact = true)
+    }
+}
+
+/** Banner rojo para errores de validación o de negocio. */
+@Composable
+fun ErrorBanner(message: String, modifier: Modifier = Modifier) {
+    InfoBanner(
+        message,
+        modifier = modifier,
+        icon = Icons.Outlined.ErrorOutline,
+        fg = DangerRed,
+        bg = DangerSoft,
+        border = DangerRed.copy(alpha = 0.4f),
+    )
+}
+
+/**
+ * Muestra un mensaje "de una sola vez" (snackbar) que viene en el State.
+ * Al terminar avisa con [onShown] para que el ViewModel lo limpie del estado.
+ */
+@Composable
+fun UserMessageEffect(message: String?, snackbarHostState: SnackbarHostState, onShown: () -> Unit) {
+    LaunchedEffect(message) {
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            onShown()
+        }
     }
 }
 

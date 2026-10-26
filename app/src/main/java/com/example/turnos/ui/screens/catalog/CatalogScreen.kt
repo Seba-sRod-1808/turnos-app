@@ -15,45 +15,62 @@ import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.turnos.data.model.Service
-import com.example.turnos.data.source.FakeDataSource
+import com.example.turnos.di.turnosViewModel
 import com.example.turnos.ui.components.*
+import com.example.turnos.ui.preview.PreviewData
 import com.example.turnos.ui.theme.*
-
-data class CatalogUiState(
-    val businessName: String = "",
-    val services: List<Service> = emptyList(),
-    val isSearching: Boolean = false,
-    val query: String = "",
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-)
+import com.example.turnos.util.quetzales
 
 @Composable
-fun CatalogScreen(
-    state: CatalogUiState,
-    onToggleSearch: () -> Unit,
-    onQueryChange: (String) -> Unit,
-    onReserve: (serviceId: String) -> Unit,
-    onRetry: () -> Unit,
-    onOpenHistory: () -> Unit,
-    onLogout: () -> Unit,
+fun CatalogRoute(
+    onReserve: (serviceId: Long) -> Unit,
+    onMyAppointments: () -> Unit,
+    onLoggedOut: () -> Unit,
+    viewModel: CatalogViewModel = turnosViewModel {
+        CatalogViewModel(serviceRepository, authRepository, sessionRepository, settingsRepository)
+    },
 ) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(state.isLoggedOut) { if (state.isLoggedOut) onLoggedOut() }
+
+    CatalogScreen(state) { event ->
+        when (event) {
+            is CatalogEvent.OnReserveClick -> onReserve(event.serviceId)
+            CatalogEvent.OnMyAppointmentsClick -> onMyAppointments()
+            else -> viewModel.onEvent(event)
+        }
+    }
+}
+
+@Composable
+fun CatalogScreen(state: CatalogState, onEvent: (CatalogEvent) -> Unit) {
     TurnosScaffold(
         title = "Catálogo de Servicios",
         actionIcon = if (state.isSearching) Icons.Filled.Close else Icons.Filled.Search,
         actionDescription = if (state.isSearching) "Cerrar búsqueda" else "Buscar",
-        onAction = onToggleSearch,
-        bottomBar = { ClientBottomBar(selected = 0, onServices = {}, onAppointments = onOpenHistory, onLogout = onLogout) },
+        onAction = { onEvent(CatalogEvent.OnToggleSearch) },
+        bottomBar = {
+            ClientBottomBar(
+                selected = ClientTab.SERVICES,
+                onServices = {},
+                onAppointments = { onEvent(CatalogEvent.OnMyAppointmentsClick) },
+                onLogout = { onEvent(CatalogEvent.OnLogoutClick) },
+            )
+        },
     ) { padding ->
         val contentModifier = Modifier.padding(padding).fillMaxSize()
         when {
             state.isLoading -> LoadingContent(contentModifier, "Cargando servicios…")
-            state.errorMessage != null -> ErrorContent(state.errorMessage, onRetry, contentModifier)
+            state.errorMessage != null -> ErrorContent(state.errorMessage, { onEvent(CatalogEvent.OnRetry) }, contentModifier)
             else -> LazyColumn(
                 contentModifier,
                 contentPadding = PaddingValues(16.dp),
@@ -63,32 +80,34 @@ fun CatalogScreen(
                     item {
                         OutlinedTextField(
                             value = state.query,
-                            onValueChange = onQueryChange,
+                            onValueChange = { onEvent(CatalogEvent.OnQueryChange(it)) },
                             placeholder = { Text("Buscar servicio") },
                             leadingIcon = { Icon(Icons.Filled.Search, null) },
                             singleLine = true,
                             shape = MaterialTheme.shapes.small,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = TurnosOrange,
-                                unfocusedBorderColor = DividerGray,
-                                focusedContainerColor = SurfaceWhite,
-                                unfocusedContainerColor = SurfaceWhite,
-                            ),
+                            colors = turnosFieldColors(),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
                 item {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Storefront, null, tint = TurnosOrange, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(state.businessName, style = MaterialTheme.typography.titleSmall, color = Ink)
+                    Column {
+                        if (state.userName.isNotBlank()) {
+                            Text("Hola, ${state.userName.substringBefore(" ")} 👋", style = MaterialTheme.typography.titleMedium, color = Ink)
+                            Spacer(Modifier.height(4.dp))
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Storefront, null, tint = TurnosOrange, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(state.businessName, style = MaterialTheme.typography.titleSmall, color = InkSecondary)
+                        }
                     }
                 }
-                items(state.services, key = { it.id }) { service ->
-                    ServiceCard(service, onReserve = { onReserve(service.id) })
+                val visible = state.visibleServices
+                items(visible, key = { it.id }) { service ->
+                    ServiceCard(service) { onEvent(CatalogEvent.OnReserveClick(service.id)) }
                 }
-                if (state.services.isEmpty()) {
+                if (visible.isEmpty()) {
                     item {
                         if (state.query.isNotBlank()) {
                             EmptyContent("No encontramos servicios con “${state.query}”.", icon = Icons.Outlined.SearchOff)
@@ -126,9 +145,12 @@ private fun ServiceCard(service: Service, onReserve: () -> Unit) {
     }
 }
 
+enum class ClientTab { SERVICES, APPOINTMENTS }
+
+/** Navegación inferior del cliente (compartida con Historial). */
 @Composable
 fun ClientBottomBar(
-    selected: Int,
+    selected: ClientTab,
     onServices: () -> Unit,
     onAppointments: () -> Unit,
     onLogout: () -> Unit,
@@ -142,11 +164,11 @@ fun ClientBottomBar(
     )
     NavigationBar(containerColor = SurfaceWhite) {
         NavigationBarItem(
-            selected = selected == 0, onClick = onServices, colors = colors,
+            selected = selected == ClientTab.SERVICES, onClick = onServices, colors = colors,
             icon = { Icon(Icons.Filled.ContentCut, null) }, label = { Text("Servicios") },
         )
         NavigationBarItem(
-            selected = selected == 1, onClick = onAppointments, colors = colors,
+            selected = selected == ClientTab.APPOINTMENTS, onClick = onAppointments, colors = colors,
             icon = { Icon(Icons.Outlined.CalendarMonth, null) }, label = { Text("Mis citas") },
         )
         NavigationBarItem(
@@ -156,38 +178,36 @@ fun ClientBottomBar(
     }
 }
 
-private val previewState = CatalogUiState(
-    businessName = FakeDataSource.business.name,
-    services = FakeDataSource.services.filter { it.active },
+// ---------------------------------------------------------------------------
+// Previews
+// ---------------------------------------------------------------------------
+
+private val sample = CatalogState(
+    businessName = PreviewData.business.name,
+    userName = "Ana López",
+    services = PreviewData.services.filter { it.active },
+    isLoading = false,
 )
 
 @Composable
-private fun CatalogPreviewHost(state: CatalogUiState) = TurnosTheme {
-    CatalogScreen(state, {}, {}, {}, {}, {}, {})
-}
+private fun Host(state: CatalogState) = TurnosTheme { CatalogScreen(state) {} }
 
 @Preview(showBackground = true, name = "Catálogo - con servicios")
 @Composable
-private fun CatalogContentPreview() = CatalogPreviewHost(previewState)
+private fun CatalogContentPreview() = Host(sample)
 
 @Preview(showBackground = true, name = "Catálogo - buscando")
 @Composable
-private fun CatalogSearchPreview() = CatalogPreviewHost(
-    previewState.copy(isSearching = true, query = "corte", services = previewState.services.filter { it.name.contains("Corte") }),
-)
+private fun CatalogSearchPreview() = Host(sample.copy(isSearching = true, query = "corte"))
 
-@Preview(showBackground = true, name = "Catálogo - búsqueda sin resultados")
+@Preview(showBackground = true, name = "Catálogo - sin resultados")
 @Composable
-private fun CatalogNoResultsPreview() = CatalogPreviewHost(
-    previewState.copy(isSearching = true, query = "tinte", services = emptyList()),
-)
+private fun CatalogNoResultsPreview() = Host(sample.copy(isSearching = true, query = "tinte"))
 
 @Preview(showBackground = true, name = "Catálogo - cargando")
 @Composable
-private fun CatalogLoadingPreview() = CatalogPreviewHost(CatalogUiState(isLoading = true))
+private fun CatalogLoadingPreview() = Host(CatalogState(isLoading = true))
 
 @Preview(showBackground = true, name = "Catálogo - error")
 @Composable
-private fun CatalogErrorPreview() = CatalogPreviewHost(
-    CatalogUiState(errorMessage = "No se pudieron cargar los servicios. Revisa tu conexión."),
-)
+private fun CatalogErrorPreview() = Host(CatalogState(isLoading = false, errorMessage = "No se pudieron cargar los servicios."))

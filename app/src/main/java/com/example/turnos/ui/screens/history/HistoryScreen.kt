@@ -10,53 +10,66 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.turnos.data.model.Appointment
-import com.example.turnos.data.source.FakeDataSource
+import com.example.turnos.data.model.AppointmentStatus
+import com.example.turnos.di.turnosViewModel
 import com.example.turnos.ui.components.*
+import com.example.turnos.ui.preview.PreviewData
 import com.example.turnos.ui.screens.catalog.ClientBottomBar
+import com.example.turnos.ui.screens.catalog.ClientTab
 import com.example.turnos.ui.theme.*
-
-/**
- * Historial de citas. La misma pantalla sirve a ambos roles:
- *  - Cliente: puede cancelar o reprogramar.
- *  - Negocio: puede marcar como completada o no presente.
- */
-
-enum class HistoryTab { UPCOMING, PAST }
-
-data class HistoryUiState(
-    val isBusiness: Boolean = false,
-    val selectedTab: HistoryTab = HistoryTab.UPCOMING,
-    val upcoming: List<Appointment> = emptyList(),
-    val past: List<Appointment> = emptyList(),
-    val appointmentToCancel: Appointment? = null,
-    val isLoading: Boolean = false,
-)
+import com.example.turnos.util.quetzales
 
 @Composable
-fun HistoryScreen(
-    state: HistoryUiState,
-    snackbarHostState: SnackbarHostState? = null,
+fun HistoryRoute(
     onBack: () -> Unit,
-    onTabSelected: (HistoryTab) -> Unit,
-    onCancelClick: (Appointment) -> Unit,
-    onConfirmCancel: () -> Unit,
-    onDismissCancel: () -> Unit,
-    onRescheduleClick: (Appointment) -> Unit,
-    onMarkCompleted: (Appointment) -> Unit,
-    onMarkNoShow: (Appointment) -> Unit,
-    onGoToCatalog: () -> Unit = {},
-    onLogout: () -> Unit = {},
+    onReschedule: (serviceId: Long, appointmentId: Long) -> Unit,
+    onGoToCatalog: () -> Unit = onBack,
+    onLoggedOut: () -> Unit = {},
+    viewModel: HistoryViewModel = turnosViewModel { handle ->
+        HistoryViewModel(handle, appointmentRepository, authRepository, sessionRepository)
+    },
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+
+    UserMessageEffect(state.userMessage, snackbar) { viewModel.onEvent(HistoryEvent.OnMessageShown) }
+    LaunchedEffect(state.isLoggedOut) { if (state.isLoggedOut) onLoggedOut() }
+
+    HistoryScreen(state, snackbar) { event ->
+        when (event) {
+            is HistoryEvent.OnRescheduleClick -> onReschedule(event.appointment.serviceId, event.appointment.id)
+            HistoryEvent.OnBackClick -> onBack()
+            HistoryEvent.OnGoToCatalog -> onGoToCatalog()
+            else -> viewModel.onEvent(event)
+        }
+    }
+}
+
+/**
+ * Historial de citas para ambos roles:
+ * - Cliente: cancelar o reprogramar.
+ * - Negocio: confirmar, marcar completada o no presente.
+ */
+@Composable
+fun HistoryScreen(
+    state: HistoryState,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    onEvent: (HistoryEvent) -> Unit,
 ) {
     Scaffold(
         topBar = {
             Column {
-                TurnosTopBar("Historial de Citas", onBack = onBack)
+                TurnosTopBar("Historial de Citas", onBack = { onEvent(HistoryEvent.OnBackClick) })
                 val tabIndex = state.selectedTab.ordinal
                 TabRow(
                     selectedTabIndex = tabIndex,
@@ -69,7 +82,7 @@ fun HistoryScreen(
                     listOf(HistoryTab.UPCOMING to "Próximas", HistoryTab.PAST to "Pasadas").forEach { (tab, label) ->
                         Tab(
                             selected = state.selectedTab == tab,
-                            onClick = { onTabSelected(tab) },
+                            onClick = { onEvent(HistoryEvent.OnTabSelected(tab)) },
                             selectedContentColor = TurnosOrange,
                             unselectedContentColor = InkSecondary,
                             text = { Text(label, style = MaterialTheme.typography.titleSmall) },
@@ -79,9 +92,16 @@ fun HistoryScreen(
             }
         },
         bottomBar = {
-            if (!state.isBusiness) ClientBottomBar(selected = 1, onServices = onGoToCatalog, onAppointments = {}, onLogout = onLogout)
+            if (!state.isBusiness) {
+                ClientBottomBar(
+                    selected = ClientTab.APPOINTMENTS,
+                    onServices = { onEvent(HistoryEvent.OnGoToCatalog) },
+                    onAppointments = {},
+                    onLogout = { onEvent(HistoryEvent.OnLogoutClick) },
+                )
+            }
         },
-        snackbarHost = { snackbarHostState?.let { SnackbarHost(it) } },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = ScreenBackground,
     ) { padding ->
         if (state.isLoading) {
@@ -94,35 +114,39 @@ fun HistoryScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (state.selectedTab == HistoryTab.UPCOMING) {
-                item { Overline("Próximas citas") }
+                item { Overline(if (state.isBusiness) "Agenda del local" else "Próximas citas") }
                 if (state.upcoming.isEmpty()) {
-                    item { EmptyContent("No tienes citas próximas.", icon = Icons.Outlined.EventBusy) }
+                    item { EmptyContent("No hay citas próximas.", icon = Icons.Outlined.EventBusy) }
                 }
                 items(state.upcoming, key = { it.id }) { a ->
-                    AppointmentCard(a) {
+                    AppointmentCard(a, showClient = state.isBusiness) {
                         if (state.isBusiness) {
-                            NeutralButton("No presente", { onMarkNoShow(a) }, Modifier.weight(1f))
-                            SecondaryButton("Completada", { onMarkCompleted(a) }, Modifier.weight(1f), compact = true)
+                            NeutralButton("No presente", { onEvent(HistoryEvent.OnMarkNoShow(a)) }, Modifier.weight(1f))
+                            if (a.status == AppointmentStatus.PENDING) {
+                                SecondaryButton("Confirmar", { onEvent(HistoryEvent.OnConfirmAppointment(a)) }, Modifier.weight(1f), compact = true)
+                            } else {
+                                SecondaryButton("Completada", { onEvent(HistoryEvent.OnMarkCompleted(a)) }, Modifier.weight(1f), compact = true)
+                            }
                         } else {
-                            NeutralButton("Cancelar", { onCancelClick(a) }, Modifier.weight(1f))
-                            SecondaryButton("Reprogramar", { onRescheduleClick(a) }, Modifier.weight(1f), compact = true)
+                            NeutralButton("Cancelar", { onEvent(HistoryEvent.OnCancelClick(a)) }, Modifier.weight(1f))
+                            SecondaryButton("Reprogramar", { onEvent(HistoryEvent.OnRescheduleClick(a)) }, Modifier.weight(1f), compact = true)
                         }
                     }
                 }
                 state.past.firstOrNull()?.let { last ->
                     item { Overline("Último historial", Modifier.padding(top = 8.dp)) }
-                    item(key = "last-${last.id}") { AppointmentCard(last, dimmed = true) }
+                    item(key = "last-${last.id}") { AppointmentCard(last, showClient = state.isBusiness, dimmed = true) }
                 }
             } else {
                 item { Overline("Citas pasadas") }
                 if (state.past.isEmpty()) item { EmptyContent("Aún no hay historial.") }
-                items(state.past, key = { it.id }) { AppointmentCard(it, dimmed = true) }
+                items(state.past, key = { it.id }) { AppointmentCard(it, showClient = state.isBusiness, dimmed = true) }
             }
 
             if (state.isBusiness) {
                 item {
                     InfoBanner(
-                        "El administrador puede marcar citas como completadas o no presentes desde este panel.",
+                        "El administrador puede confirmar citas y marcarlas como completadas o no presentes desde este panel.",
                         icon = Icons.Outlined.Info,
                     )
                 }
@@ -132,13 +156,15 @@ fun HistoryScreen(
 
     state.appointmentToCancel?.let { a ->
         AlertDialog(
-            onDismissRequest = onDismissCancel,
+            onDismissRequest = { onEvent(HistoryEvent.OnDismissCancel) },
             title = { Text("¿Cancelar cita?") },
-            text = {
-                Text("${a.service} · ${a.dateLabel}\n\nSi faltan menos de 2 horas, se registrará como cancelación tardía.")
+            text = { Text("${a.serviceName} · ${a.dateLabel}\n\nSi faltan menos de 2 horas, se registrará como cancelación tardía.") },
+            confirmButton = {
+                TextButton(onClick = { onEvent(HistoryEvent.OnConfirmCancel) }) { Text("Cancelar cita", color = DangerRed) }
             },
-            confirmButton = { TextButton(onClick = onConfirmCancel) { Text("Cancelar cita", color = DangerRed) } },
-            dismissButton = { TextButton(onClick = onDismissCancel) { Text("Volver", color = InkSecondary) } },
+            dismissButton = {
+                TextButton(onClick = { onEvent(HistoryEvent.OnDismissCancel) }) { Text("Volver", color = InkSecondary) }
+            },
             containerColor = SurfaceWhite,
         )
     }
@@ -147,18 +173,29 @@ fun HistoryScreen(
 @Composable
 private fun AppointmentCard(
     a: Appointment,
+    showClient: Boolean,
     dimmed: Boolean = false,
     actions: (@Composable RowScope.() -> Unit)? = null,
 ) {
     TurnosCard(padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = if (dimmed) Modifier.alpha(0.75f) else Modifier) {
-            Avatar(a.barber, 40.dp)
+            Avatar(if (showClient) a.clientName else a.barberName, 40.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(a.service, style = MaterialTheme.typography.titleSmall, color = Ink)
-                Text("Con ${a.barber}", style = MaterialTheme.typography.bodySmall, color = InkSecondary)
+                Text(a.serviceName, style = MaterialTheme.typography.titleSmall, color = Ink)
+                Text(
+                    if (showClient) "${a.clientName} · con ${a.barberName}" else "Con ${a.barberName}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkSecondary,
+                )
             }
-            AppointmentStatusChip(a.status)
+            Column(horizontalAlignment = Alignment.End) {
+                AppointmentStatusChip(a.status)
+                if (a.lateCancellation) {
+                    Spacer(Modifier.height(4.dp))
+                    StatusChip("Tardía", WarningAmber, WarningSoft)
+                }
+            }
         }
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -179,38 +216,35 @@ private fun Overline(text: String, modifier: Modifier = Modifier) {
     Text(text.uppercase(), style = MaterialTheme.typography.labelMedium, color = InkSecondary, modifier = modifier)
 }
 
-private val previewState = HistoryUiState(upcoming = FakeDataSource.upcoming, past = FakeDataSource.past)
+// ---------------------------------------------------------------------------
+// Previews
+// ---------------------------------------------------------------------------
+
+private val sample = HistoryState(isLoading = false, upcoming = PreviewData.upcoming, past = PreviewData.past)
 
 @Composable
-private fun HistoryPreviewHost(state: HistoryUiState) = TurnosTheme {
-    HistoryScreen(
-        state = state, onBack = {}, onTabSelected = {}, onCancelClick = {}, onConfirmCancel = {},
-        onDismissCancel = {}, onRescheduleClick = {}, onMarkCompleted = {}, onMarkNoShow = {},
-    )
-}
+private fun Host(state: HistoryState) = TurnosTheme { HistoryScreen(state) {} }
 
 @Preview(showBackground = true, name = "Historial cliente - próximas")
 @Composable
-private fun HistoryClientPreview() = HistoryPreviewHost(previewState)
+private fun HistoryClientPreview() = Host(sample)
 
 @Preview(showBackground = true, name = "Historial cliente - pasadas")
 @Composable
-private fun HistoryPastPreview() = HistoryPreviewHost(previewState.copy(selectedTab = HistoryTab.PAST))
+private fun HistoryPastPreview() = Host(sample.copy(selectedTab = HistoryTab.PAST))
 
 @Preview(showBackground = true, name = "Historial cliente - diálogo cancelar")
 @Composable
-private fun HistoryCancelDialogPreview() = HistoryPreviewHost(
-    previewState.copy(appointmentToCancel = FakeDataSource.upcoming.first()),
-)
+private fun HistoryCancelDialogPreview() = Host(sample.copy(appointmentToCancel = PreviewData.upcoming.first()))
 
 @Preview(showBackground = true, name = "Historial negocio")
 @Composable
-private fun HistoryBusinessPreview() = HistoryPreviewHost(previewState.copy(isBusiness = true))
+private fun HistoryBusinessPreview() = Host(sample.copy(isBusiness = true))
 
 @Preview(showBackground = true, name = "Historial - sin citas")
 @Composable
-private fun HistoryEmptyPreview() = HistoryPreviewHost(HistoryUiState())
+private fun HistoryEmptyPreview() = Host(HistoryState(isLoading = false))
 
 @Preview(showBackground = true, name = "Historial - cargando")
 @Composable
-private fun HistoryLoadingPreview() = HistoryPreviewHost(HistoryUiState(isLoading = true))
+private fun HistoryLoadingPreview() = Host(HistoryState(isLoading = true))

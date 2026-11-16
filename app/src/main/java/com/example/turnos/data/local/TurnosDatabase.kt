@@ -14,6 +14,7 @@ import com.example.turnos.data.local.entity.*
 @Database(
     entities = [
         UserEntity::class,
+        BusinessProfileEntity::class,
         ServiceEntity::class,
         BarberEntity::class,
         AppointmentEntity::class,
@@ -25,7 +26,7 @@ import com.example.turnos.data.local.entity.*
         MessageTemplateEntity::class,
         HolidayEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class TurnosDatabase : RoomDatabase() {

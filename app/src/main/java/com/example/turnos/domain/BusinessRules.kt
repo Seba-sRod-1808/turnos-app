@@ -18,7 +18,9 @@ import java.time.LocalDateTime
  *  3. no cae en un bloqueo manual,
  *  4. no está en el pasado.
  * La duración del servicio determina cuántos slots consecutivos ocupa.
- * Cancelar con menos de 2 horas de anticipación se marca como cancelación tardía.
+ * Cancelar con menos de 2 horas de anticipación se marca como cancelación tardía,
+ * y en ese mismo margen ya no se permite reprogramar.
+ * Una cita solo se cierra (completada / no presente) cuando ya llegó su hora de inicio.
  */
 
 object BusinessRules {
@@ -30,6 +32,12 @@ object BusinessRules {
     const val COUNTRY_CODE = "GT"
 
     const val BOOKING_WINDOW_DAYS = 14
+
+    const val DEFAULT_REMINDER_HOURS = 2L
+
+    const val LAST_MINUTE_REMINDER_MIN = 15L
+
+    private val reminderHoursRegex = Regex("(\\d+)\\s*h")
 
     fun computeSlots(
         date: LocalDate,
@@ -73,7 +81,28 @@ object BusinessRules {
     }
 
     fun isLateCancellation(appointment: Appointment, now: LocalDateTime = LocalDateTime.now()): Boolean =
-        Duration.between(now, appointment.startDateTime).toHours() < LATE_CANCELLATION_HOURS
+        Duration.between(now, appointment.startDateTime) < Duration.ofHours(LATE_CANCELLATION_HOURS)
+
+    fun canReschedule(appointment: Appointment, now: LocalDateTime = LocalDateTime.now()): Boolean =
+        appointment.isActive && !isLateCancellation(appointment, now)
+
+    fun canClose(appointment: Appointment, now: LocalDateTime = LocalDateTime.now()): Boolean =
+        appointment.isActive && appointment.hasStarted(now)
+
+    /** Lee las horas de anticipación de la plantilla ("2 h antes" -> 2). */
+    fun reminderHoursFrom(timing: String): Long =
+        reminderHoursRegex.find(timing)?.groupValues?.get(1)?.toLongOrNull() ?: DEFAULT_REMINDER_HOURS
+
+    /**
+     * Si la cita se reservó con menos anticipación que el recordatorio, se avisa 15 min antes;
+     * null si ni eso es posible.
+     */
+    fun reminderTime(start: LocalDateTime, hoursBefore: Long, now: LocalDateTime = LocalDateTime.now()): LocalDateTime? {
+        val preferred = start.minusHours(hoursBefore)
+        if (preferred.isAfter(now)) return preferred
+        val lastMinute = start.minusMinutes(LAST_MINUTE_REMINDER_MIN)
+        return lastMinute.takeIf { it.isAfter(now) }
+    }
 
     private fun overlaps(aStart: Int, aEnd: Int, bStart: Int, bEnd: Int) = aStart < bEnd && bStart < aEnd
 }

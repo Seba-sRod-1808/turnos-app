@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.turnos"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "1.0.0"
     }
 
     buildTypes {
@@ -60,4 +60,8 @@ dependencies {
 
     implementation(libs.retrofit)
     implementation(libs.retrofit.kotlinx.serialization)
+
+    implementation(libs.androidx.work.runtime.ktx)
+
+    testImplementation(libs.junit)
 }

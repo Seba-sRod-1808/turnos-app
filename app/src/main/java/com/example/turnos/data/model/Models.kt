@@ -19,8 +19,11 @@ enum class UserRole { CLIENT, BUSINESS }
 data class User(
     val id: Long,
     val name: String,
-    val email: String,
+    val username: String,
     val role: UserRole,
+    val phone: String = "",
+    val mustChangePassword: Boolean = false,
+    val hasRecoveryQuestion: Boolean = false,
 )
 
 data class Service(
@@ -50,6 +53,7 @@ data class Appointment(
     val id: Long,
     val serviceId: Long,
     val serviceName: String,
+    val barberId: Long,
     val barberName: String,
     val clientId: Long,
     val clientName: String,
@@ -65,6 +69,8 @@ data class Appointment(
     val dateLabel: String get() = "${formatDateLong(date)}, ${formatTime(startMinutes)}"
 
     val isActive: Boolean get() = status == AppointmentStatus.PENDING || status == AppointmentStatus.CONFIRMED
+
+    fun hasStarted(now: LocalDateTime): Boolean = !startDateTime.isAfter(now)
 }
 
 enum class SlotState { AVAILABLE, OCCUPIED, BLOCKED }
@@ -92,6 +98,8 @@ data class NotificationPref(
     val enabled: Boolean,
 )
 
+enum class TemplateKind { CONFIRMATION, REMINDER, FOLLOW_UP, CUSTOM }
+
 data class MessageTemplate(
     val id: Long,
     val title: String,
@@ -99,12 +107,14 @@ data class MessageTemplate(
     val timing: String,
     val channel: String,
     val active: Boolean,
+    val kind: TemplateKind = TemplateKind.CUSTOM,
 )
 
 data class BusinessProfile(
     val name: String,
     val address: String,
-    val rating: Double,
+    val phone: String = "",
+    val rating: Double = 4.5,
 )
 
 data class Holiday(val date: LocalDate, val name: String)

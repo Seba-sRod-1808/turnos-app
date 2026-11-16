@@ -18,6 +18,12 @@ interface AppointmentDao {
     @Query("SELECT * FROM appointments WHERE clientId = :clientId ORDER BY date, startMinutes")
     fun observeForClient(clientId: Long): Flow<List<AppointmentEntity>>
 
+    @Query("SELECT * FROM appointments WHERE barberId = :barberId ORDER BY date, startMinutes")
+    fun observeForBarber(barberId: Long): Flow<List<AppointmentEntity>>
+
+    @Query("SELECT COUNT(*) FROM appointments WHERE serviceId = :serviceId AND status IN ('PENDING', 'CONFIRMED')")
+    suspend fun countActiveForService(serviceId: Long): Int
+
     @Query("SELECT * FROM appointments WHERE date = :date AND status IN ('PENDING', 'CONFIRMED')")
     suspend fun getActiveOn(date: String): List<AppointmentEntity>
 

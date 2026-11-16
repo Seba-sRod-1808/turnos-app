@@ -15,6 +15,11 @@ class AppointmentRepository(private val dao: AppointmentDao) {
     fun observeForClient(clientId: Long): Flow<List<Appointment>> =
         dao.observeForClient(clientId).map { list -> list.map { it.toModel() } }
 
+    fun observeForBarber(barberId: Long): Flow<List<Appointment>> =
+        dao.observeForBarber(barberId).map { list -> list.map { it.toModel() } }
+
+    suspend fun hasActiveForService(serviceId: Long): Boolean = dao.countActiveForService(serviceId) > 0
+
     suspend fun getActiveOn(date: LocalDate): List<Appointment> = dao.getActiveOn(date.toString()).map { it.toModel() }
 
     suspend fun getById(id: Long): Appointment? = dao.getById(id)?.toModel()
@@ -23,6 +28,7 @@ class AppointmentRepository(private val dao: AppointmentDao) {
         AppointmentEntity(
             serviceId = appointment.serviceId,
             serviceName = appointment.serviceName,
+            barberId = appointment.barberId,
             barberName = appointment.barberName,
             clientId = appointment.clientId,
             clientName = appointment.clientName,

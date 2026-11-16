@@ -14,6 +14,9 @@ interface BarberDao {
     @Query("SELECT * FROM barbers WHERE status != 'ABSENT' ORDER BY id LIMIT 1")
     suspend fun firstAvailable(): BarberEntity?
 
+    @Query("SELECT * FROM barbers WHERE id = :id")
+    suspend fun getById(id: Long): BarberEntity?
+
     @Insert
     suspend fun insert(barber: BarberEntity): Long
 

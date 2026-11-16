@@ -17,15 +17,42 @@ import java.time.LocalDate
  * Un bloqueo manual aplica a un horario puntual: un slot bloqueado no se ofrece.
  */
 
-@Entity(tableName = "users", indices = [Index(value = ["email"], unique = true)])
+@Entity(tableName = "users", indices = [Index(value = ["username"], unique = true)])
 data class UserEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val email: String,
+    val username: String,
+    val phone: String = "",
     val passwordHash: String,
     val role: String,
+    val mustChangePassword: Boolean = false,
+    val securityQuestion: String? = null,
+    val securityAnswerHash: String? = null,
 ) {
-    fun toModel() = User(id, name, email, UserRole.valueOf(role))
+    fun toModel() = User(
+        id = id,
+        name = name,
+        username = username,
+        role = UserRole.valueOf(role),
+        phone = phone,
+        mustChangePassword = mustChangePassword,
+        hasRecoveryQuestion = securityQuestion != null,
+    )
+}
+
+@Entity(tableName = "business_profile")
+data class BusinessProfileEntity(
+    @PrimaryKey val id: Int = SINGLE_ROW_ID,
+    val name: String,
+    val address: String,
+    val phone: String,
+    val rating: Double,
+) {
+    fun toModel() = BusinessProfile(name, address, phone, rating)
+
+    companion object {
+        const val SINGLE_ROW_ID = 1
+    }
 }
 
 @Entity(tableName = "services")
@@ -55,11 +82,12 @@ data class BarberEntity(
         Barber(id, name, role, rating, BarberStatus.valueOf(status), schedule, appointmentsToday)
 }
 
-@Entity(tableName = "appointments", indices = [Index("date"), Index("clientId")])
+@Entity(tableName = "appointments", indices = [Index("date"), Index("clientId"), Index("barberId")])
 data class AppointmentEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val serviceId: Long,
     val serviceName: String,
+    val barberId: Long,
     val barberName: String,
     val clientId: Long,
     val clientName: String,
@@ -74,6 +102,7 @@ data class AppointmentEntity(
         id = id,
         serviceId = serviceId,
         serviceName = serviceName,
+        barberId = barberId,
         barberName = barberName,
         clientId = clientId,
         clientName = clientName,
@@ -136,11 +165,12 @@ data class MessageTemplateEntity(
     val timing: String,
     val channel: String,
     val active: Boolean,
+    val kind: String = TemplateKind.CUSTOM.name,
 ) {
-    fun toModel() = MessageTemplate(id, title, body, timing, channel, active)
+    fun toModel() = MessageTemplate(id, title, body, timing, channel, active, TemplateKind.valueOf(kind))
 }
 
-fun MessageTemplate.toEntity() = MessageTemplateEntity(id, title, body, timing, channel, active)
+fun MessageTemplate.toEntity() = MessageTemplateEntity(id, title, body, timing, channel, active, kind.name)
 
 @Entity(tableName = "holidays")
 data class HolidayEntity(

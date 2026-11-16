@@ -5,6 +5,9 @@ import com.example.turnos.data.local.DatabaseSeeder
 import com.example.turnos.data.local.TurnosDatabase
 import com.example.turnos.data.remote.NetworkModule
 import com.example.turnos.data.repository.*
+import com.example.turnos.notifications.AppointmentAlerts
+import com.example.turnos.notifications.AppointmentNotifier
+import com.example.turnos.util.NetworkMonitor
 
 /**
  * Inyección de dependencias manual: un solo lugar donde se crean la base de datos,
@@ -18,13 +21,18 @@ class AppContainer(context: Context) {
     private val holidaysApi = NetworkModule.holidaysApi()
 
     val seeder = DatabaseSeeder(database)
+    val networkMonitor = NetworkMonitor(context)
 
-    val sessionRepository = SessionRepository()
+    val sessionRepository = SessionRepository(context, database.userDao())
     val authRepository = AuthRepository(database.userDao(), sessionRepository)
+    val clientRepository = ClientRepository(database.userDao())
     val serviceRepository = ServiceRepository(database.serviceDao())
     val barberRepository = BarberRepository(database.barberDao(), database.appointmentDao())
     val appointmentRepository = AppointmentRepository(database.appointmentDao())
     val availabilityRepository = AvailabilityRepository(database.availabilityDao())
     val settingsRepository = SettingsRepository(database.settingsDao())
     val holidayRepository = HolidayRepository(holidaysApi, database.holidayDao())
+
+    val appointmentNotifier = AppointmentNotifier(context, settingsRepository)
+    val appointmentAlerts = AppointmentAlerts(context, appointmentNotifier, settingsRepository)
 }

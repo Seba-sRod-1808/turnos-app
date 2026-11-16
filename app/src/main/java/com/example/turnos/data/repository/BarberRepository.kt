@@ -24,7 +24,7 @@ class BarberRepository(
                 it.date == today.toString() &&
                     (it.status == AppointmentStatus.PENDING.name || it.status == AppointmentStatus.CONFIRMED.name)
             }
-            barbers.map { b -> b.toModel(appointmentsToday = todayActive.count { it.barberName == b.name }) }
+            barbers.map { b -> b.toModel(appointmentsToday = todayActive.count { it.barberId == b.id }) }
         }
 
     suspend fun add(name: String, role: String) {
@@ -35,5 +35,7 @@ class BarberRepository(
 
     suspend fun setStatus(id: Long, status: BarberStatus) = barberDao.updateStatus(id, status.name)
 
-    suspend fun firstAvailableName(): String = barberDao.firstAvailable()?.name ?: "Por asignar"
+    suspend fun firstAvailable(): Barber? = barberDao.firstAvailable()?.toModel()
+
+    suspend fun getById(id: Long): Barber? = barberDao.getById(id)?.toModel()
 }

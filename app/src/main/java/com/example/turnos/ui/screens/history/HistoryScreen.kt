@@ -36,7 +36,7 @@ fun HistoryRoute(
     onGoToCatalog: () -> Unit = onBack,
     onLoggedOut: () -> Unit = {},
     viewModel: HistoryViewModel = turnosViewModel { handle ->
-        HistoryViewModel(handle, appointmentRepository, authRepository, sessionRepository)
+        HistoryViewModel(handle, appointmentRepository, authRepository, appointmentAlerts, barberRepository, sessionRepository)
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -44,10 +44,15 @@ fun HistoryRoute(
 
     UserMessageEffect(state.userMessage, snackbar) { viewModel.onEvent(HistoryEvent.OnMessageShown) }
     LaunchedEffect(state.isLoggedOut) { if (state.isLoggedOut) onLoggedOut() }
+    LaunchedEffect(state.rescheduleTarget) {
+        state.rescheduleTarget?.let { appointment ->
+            onReschedule(appointment.serviceId, appointment.id)
+            viewModel.onEvent(HistoryEvent.OnNavigationHandled)
+        }
+    }
 
     HistoryScreen(state, snackbar) { event ->
         when (event) {
-            is HistoryEvent.OnRescheduleClick -> onReschedule(event.appointment.serviceId, event.appointment.id)
             HistoryEvent.OnBackClick -> onBack()
             HistoryEvent.OnGoToCatalog -> onGoToCatalog()
             else -> viewModel.onEvent(event)
@@ -69,7 +74,7 @@ fun HistoryScreen(
     Scaffold(
         topBar = {
             Column {
-                TurnosTopBar("Historial de Citas", onBack = { onEvent(HistoryEvent.OnBackClick) })
+                TurnosTopBar(state.title, onBack = { onEvent(HistoryEvent.OnBackClick) })
                 val tabIndex = state.selectedTab.ordinal
                 TabRow(
                     selectedTabIndex = tabIndex,
@@ -114,39 +119,49 @@ fun HistoryScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (state.selectedTab == HistoryTab.UPCOMING) {
-                item { Overline(if (state.isBusiness) "Agenda del local" else "Próximas citas") }
+                if (state.isBusiness && state.awaitingClose.isNotEmpty()) {
+                    item { Overline("Pendientes de cerrar") }
+                    items(state.awaitingClose, key = { "close-${it.id}" }) { a ->
+                        AppointmentCard(a, showClient = true) {
+                            NeutralButton("No presente", { onEvent(HistoryEvent.OnMarkNoShow(a)) }, Modifier.weight(1f))
+                            SecondaryButton("Completada", { onEvent(HistoryEvent.OnMarkCompleted(a)) }, Modifier.weight(1f), compact = true)
+                        }
+                    }
+                }
+                item { Overline(if (state.isBusiness) "Próximas en la agenda" else "Próximas citas", Modifier.padding(top = 4.dp)) }
                 if (state.upcoming.isEmpty()) {
                     item { EmptyContent("No hay citas próximas.", icon = Icons.Outlined.EventBusy) }
                 }
                 items(state.upcoming, key = { it.id }) { a ->
-                    AppointmentCard(a, showClient = state.isBusiness) {
-                        if (state.isBusiness) {
-                            NeutralButton("No presente", { onEvent(HistoryEvent.OnMarkNoShow(a)) }, Modifier.weight(1f))
-                            if (a.status == AppointmentStatus.PENDING) {
+                    if (state.isBusiness) {
+                        if (a.status == AppointmentStatus.PENDING) {
+                            AppointmentCard(a, showClient = true) {
                                 SecondaryButton("Confirmar", { onEvent(HistoryEvent.OnConfirmAppointment(a)) }, Modifier.weight(1f), compact = true)
-                            } else {
-                                SecondaryButton("Completada", { onEvent(HistoryEvent.OnMarkCompleted(a)) }, Modifier.weight(1f), compact = true)
                             }
                         } else {
+                            AppointmentCard(a, showClient = true)
+                        }
+                    } else {
+                        AppointmentCard(a, showClient = false) {
                             NeutralButton("Cancelar", { onEvent(HistoryEvent.OnCancelClick(a)) }, Modifier.weight(1f))
                             SecondaryButton("Reprogramar", { onEvent(HistoryEvent.OnRescheduleClick(a)) }, Modifier.weight(1f), compact = true)
                         }
                     }
                 }
-                state.past.firstOrNull()?.let { last ->
+                state.pastForDisplay.firstOrNull()?.let { last ->
                     item { Overline("Último historial", Modifier.padding(top = 8.dp)) }
                     item(key = "last-${last.id}") { AppointmentCard(last, showClient = state.isBusiness, dimmed = true) }
                 }
             } else {
                 item { Overline("Citas pasadas") }
-                if (state.past.isEmpty()) item { EmptyContent("Aún no hay historial.") }
-                items(state.past, key = { it.id }) { AppointmentCard(it, showClient = state.isBusiness, dimmed = true) }
+                if (state.pastForDisplay.isEmpty()) item { EmptyContent("Aún no hay historial.") }
+                items(state.pastForDisplay, key = { it.id }) { AppointmentCard(it, showClient = state.isBusiness, dimmed = true) }
             }
 
             if (state.isBusiness) {
                 item {
                     InfoBanner(
-                        "El administrador puede confirmar citas y marcarlas como completadas o no presentes desde este panel.",
+                        "Las citas se marcan como completadas o no presentes cuando ya llegó su hora.",
                         icon = Icons.Outlined.Info,
                     )
                 }
@@ -237,9 +252,15 @@ private fun HistoryPastPreview() = Host(sample.copy(selectedTab = HistoryTab.PAS
 @Composable
 private fun HistoryCancelDialogPreview() = Host(sample.copy(appointmentToCancel = PreviewData.upcoming.first()))
 
-@Preview(showBackground = true, name = "Historial negocio")
+@Preview(showBackground = true, heightDp = 1000, name = "Historial negocio - pendientes de cerrar")
 @Composable
-private fun HistoryBusinessPreview() = Host(sample.copy(isBusiness = true))
+private fun HistoryBusinessPreview() = Host(
+    sample.copy(isBusiness = true, awaitingClose = listOf(PreviewData.upcoming.first().copy(id = 99))),
+)
+
+@Preview(showBackground = true, name = "Historial negocio - agenda de un barbero")
+@Composable
+private fun HistoryBarberPreview() = Host(sample.copy(isBusiness = true, barberName = "Alex Rivera"))
 
 @Preview(showBackground = true, name = "Historial - sin citas")
 @Composable

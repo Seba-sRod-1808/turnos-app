@@ -4,10 +4,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.turnos.data.model.MessageTemplate
 import com.example.turnos.data.repository.SettingsRepository
+import com.example.turnos.notifications.AppointmentNotifier
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class NotificationsViewModel(private val repository: SettingsRepository) : ViewModel() {
+/**
+ * Las plantillas de confirmación y recordatorio son las que usan las notificaciones reales de la app;
+ * el tiempo de la plantilla de recordatorio define con cuántas horas de anticipación se avisa.
+ */
+
+class NotificationsViewModel(
+    private val repository: SettingsRepository,
+    private val notifier: AppointmentNotifier,
+) : ViewModel() {
 
     private val _state = MutableStateFlow(NotificationsState())
     val state: StateFlow<NotificationsState> = _state.asStateFlow()
@@ -26,14 +35,18 @@ class NotificationsViewModel(private val repository: SettingsRepository) : ViewM
             }
             is NotificationsEvent.OnEditTemplate -> _state.update {
                 val t = event.template
-                it.copy(form = TemplateForm(t.id, t.title, t.body, t.timing, t.channel, t.active))
+                it.copy(form = TemplateForm(t.id, t.title, t.body, t.timing, t.channel, t.active, t.kind))
             }
             NotificationsEvent.OnNewTemplate -> _state.update { it.copy(form = TemplateForm()) }
             is NotificationsEvent.OnFormChange -> _state.update { it.copy(form = event.form) }
             NotificationsEvent.OnSaveForm -> saveForm()
             NotificationsEvent.OnDismissForm -> _state.update { it.copy(form = null) }
-            NotificationsEvent.OnSendTestClick ->
-                _state.update { it.copy(userMessage = "Notificación de prueba enviada (simulada).") }
+            NotificationsEvent.OnSendTestClick -> {
+                val sent = notifier.notifyTest()
+                _state.update {
+                    it.copy(userMessage = if (sent) "Notificación de prueba enviada." else "Activa el permiso de notificaciones de Turnos en Ajustes.")
+                }
+            }
             NotificationsEvent.OnMessageShown -> _state.update { it.copy(userMessage = null) }
             NotificationsEvent.OnBackClick -> Unit
         }
@@ -43,7 +56,7 @@ class NotificationsViewModel(private val repository: SettingsRepository) : ViewM
         val f = _state.value.form ?: return
         if (!f.isValid) return
         viewModelScope.launch {
-            repository.saveTemplate(MessageTemplate(f.id, f.title.trim(), f.body.trim(), f.timing, f.channel, f.active))
+            repository.saveTemplate(MessageTemplate(f.id, f.title.trim(), f.body.trim(), f.timing, f.channel, f.active, f.kind))
             _state.update { it.copy(form = null, userMessage = if (f.isNew) "Plantilla creada." else "Plantilla actualizada.") }
         }
     }

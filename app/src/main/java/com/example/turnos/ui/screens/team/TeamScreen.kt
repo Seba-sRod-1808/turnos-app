@@ -25,7 +25,7 @@ import com.example.turnos.ui.theme.*
 @Composable
 fun TeamRoute(
     onBack: () -> Unit,
-    onViewAgenda: () -> Unit,
+    onViewAgenda: (barberId: Long) -> Unit,
     viewModel: TeamViewModel = turnosViewModel { TeamViewModel(barberRepository) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -35,7 +35,7 @@ fun TeamRoute(
     TeamScreen(state, snackbar) { event ->
         when (event) {
             TeamEvent.OnBackClick -> onBack()
-            is TeamEvent.OnViewAgendaClick -> onViewAgenda()
+            is TeamEvent.OnViewAgendaClick -> onViewAgenda(event.barber.id)
             else -> viewModel.onEvent(event)
         }
     }

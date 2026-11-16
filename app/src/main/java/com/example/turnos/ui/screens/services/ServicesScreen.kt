@@ -32,7 +32,7 @@ import com.example.turnos.util.quetzales
 @Composable
 fun ServicesRoute(
     onBack: () -> Unit,
-    viewModel: ServicesViewModel = turnosViewModel { ServicesViewModel(serviceRepository) },
+    viewModel: ServicesViewModel = turnosViewModel { ServicesViewModel(serviceRepository, appointmentRepository) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }

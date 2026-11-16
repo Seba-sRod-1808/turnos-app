@@ -2,6 +2,7 @@ package com.example.turnos.ui.screens.notifications
 
 import com.example.turnos.data.model.MessageTemplate
 import com.example.turnos.data.model.NotificationPref
+import com.example.turnos.data.model.TemplateKind
 
 /**
  * Campos del formulario de plantilla (id = 0 es plantilla nueva).
@@ -13,9 +14,11 @@ data class TemplateForm(
     val title: String = "",
     val body: String = "",
     val timing: String = "Al reservar",
-    val channel: String = "WhatsApp",
+    val channel: String = "App",
     val active: Boolean = true,
+    val kind: TemplateKind = TemplateKind.CUSTOM,
 ) {
+    val isReminder: Boolean get() = kind == TemplateKind.REMINDER
     val isNew: Boolean get() = id == 0L
     val isValid: Boolean get() = title.isNotBlank() && body.isNotBlank()
 }
@@ -23,10 +26,13 @@ data class TemplateForm(
 data class NotificationsState(
     val prefs: List<NotificationPref> = emptyList(),
     val templates: List<MessageTemplate> = emptyList(),
-    val lastDelivery: String? = "Último envío: 9 de 9 avisos entregados correctamente.",
+    val lastDelivery: String? = "Las confirmaciones y recordatorios llegan como notificaciones al teléfono del cliente.",
     val form: TemplateForm? = null,
     val isLoading: Boolean = true,
     val userMessage: String? = null,
 ) {
     val activePrefs: Int get() = prefs.count { it.enabled }
 }
+
+val REMINDER_TIMINGS = listOf("1 h antes", "2 h antes", "24 h antes")
+val TEMPLATE_CHANNELS = listOf("App", "WhatsApp", "SMS")

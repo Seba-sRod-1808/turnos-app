@@ -13,23 +13,29 @@ import com.example.turnos.ui.screens.booking.BookingRoute
 import com.example.turnos.ui.screens.business.AdminSection
 import com.example.turnos.ui.screens.business.MyBusinessRoute
 import com.example.turnos.ui.screens.catalog.CatalogRoute
+import com.example.turnos.ui.screens.clients.ClientsRoute
+import com.example.turnos.ui.screens.forgotpassword.ForgotPasswordRoute
 import com.example.turnos.ui.screens.history.HistoryRoute
 import com.example.turnos.ui.screens.login.LoginRoute
 import com.example.turnos.ui.screens.notifications.NotificationsRoute
 import com.example.turnos.ui.screens.payments.PaymentsRoute
-import com.example.turnos.ui.screens.register.RegisterRoute
 import com.example.turnos.ui.screens.services.ServicesRoute
+import com.example.turnos.ui.screens.setupaccount.SetupAccountRoute
 import com.example.turnos.ui.screens.team.TeamRoute
 
 /**
  * Grafo de navegación. HistoryDestination se registra una sola vez (en el grafo del cliente)
- * y es accesible desde cualquier grafo; el argumento asBusiness decide qué ve.
+ * y es accesible desde cualquier grafo; sus argumentos deciden qué citas muestra.
  * Al abrir la agenda desde una reserva, la reserva sale del back stack.
+ * El primer ingreso y el inicio de sesión sacan todo el grafo de autenticación del back stack.
  */
 
 @Composable
-fun TurnosNavHost(navController: NavHostController = rememberNavController()) {
-    NavHost(navController = navController, startDestination = AuthGraph) {
+fun TurnosNavHost(
+    startDestination: Any,
+    navController: NavHostController = rememberNavController(),
+) {
+    NavHost(navController = navController, startDestination = startDestination) {
         authGraph(navController)
         clientGraph(navController)
         businessGraph(navController)
@@ -41,13 +47,17 @@ private fun NavGraphBuilder.authGraph(navController: NavHostController) {
         composable<LoginDestination> {
             LoginRoute(
                 onLoggedIn = { role -> navController.navigateToHome(role) },
-                onCreateAccount = { navController.navigate(RegisterDestination) },
+                onFirstLogin = { userId -> navController.navigate(SetupAccountDestination(userId)) },
+                onForgotPassword = { navController.navigate(ForgotPasswordDestination) },
             )
         }
-        composable<RegisterDestination> {
-            RegisterRoute(
-                onRegistered = { role -> navController.navigateToHome(role) },
-                onBack = { navController.popBackStack() },
+        composable<ForgotPasswordDestination> {
+            ForgotPasswordRoute(onBackToLogin = { navController.popBackStack() })
+        }
+        composable<SetupAccountDestination> {
+            SetupAccountRoute(
+                onCompleted = { role -> navController.navigateToHome(role) },
+                onCancel = { navController.popBackStack() },
             )
         }
     }
@@ -103,12 +113,13 @@ private fun NavGraphBuilder.businessGraph(navController: NavHostController) {
                 onLoggedOut = { navController.logout() },
             )
         }
+        composable<ClientsDestination> { ClientsRoute(onBack = back) }
         composable<ServicesDestination> { ServicesRoute(onBack = back) }
         composable<AvailabilityDestination> { AvailabilityRoute(onBack = back) }
         composable<TeamDestination> {
             TeamRoute(
                 onBack = back,
-                onViewAgenda = { navController.navigate(HistoryDestination(asBusiness = true)) },
+                onViewAgenda = { barberId -> navController.navigate(HistoryDestination(asBusiness = true, barberId = barberId)) },
             )
         }
         composable<PaymentsDestination> { PaymentsRoute(onBack = back) }
@@ -117,6 +128,7 @@ private fun NavGraphBuilder.businessGraph(navController: NavHostController) {
 }
 
 private fun AdminSection.destination(): Any = when (this) {
+    AdminSection.CLIENTS -> ClientsDestination
     AdminSection.SERVICES -> ServicesDestination
     AdminSection.AVAILABILITY -> AvailabilityDestination
     AdminSection.TEAM -> TeamDestination
@@ -126,8 +138,7 @@ private fun AdminSection.destination(): Any = when (this) {
 }
 
 private fun NavHostController.navigateToHome(role: UserRole) {
-    val graph: Any = if (role == UserRole.BUSINESS) BusinessGraph else ClientGraph
-    navigate(graph) {
+    navigate(homeGraphFor(role)) {
         popUpTo<AuthGraph> { inclusive = true }
         launchSingleTop = true
     }

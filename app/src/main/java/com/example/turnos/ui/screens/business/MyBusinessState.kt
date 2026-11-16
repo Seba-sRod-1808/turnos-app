@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.turnos.data.model.BusinessProfile
 
 enum class AdminSection(val label: String, val icon: ImageVector) {
+    CLIENTS("Clientes y accesos", Icons.Outlined.PersonAddAlt),
     SERVICES("Servicios y Precios", Icons.Outlined.ContentCut),
     AVAILABILITY("Horarios y Disponibilidad", Icons.Outlined.Schedule),
     TEAM("Equipo / Barberos", Icons.Outlined.Groups),
@@ -15,6 +16,14 @@ enum class AdminSection(val label: String, val icon: ImageVector) {
     NOTIFICATIONS("Notificaciones", Icons.Outlined.Notifications),
 }
 
+data class ProfileForm(
+    val name: String = "",
+    val address: String = "",
+    val phone: String = "",
+    val nameError: String? = null,
+    val phoneError: String? = null,
+)
+
 data class MyBusinessState(
     val profile: BusinessProfile? = null,
     val ownerName: String = "",
@@ -22,6 +31,8 @@ data class MyBusinessState(
     val pending: Int = 0,
     val revenueToday: Int = 0,
     val sections: List<AdminSection> = AdminSection.entries,
+    /** Formulario de "Editar Perfil"; null = diálogo cerrado. */
+    val profileForm: ProfileForm? = null,
     val isLoading: Boolean = true,
     val userMessage: String? = null,
     val isLoggedOut: Boolean = false,

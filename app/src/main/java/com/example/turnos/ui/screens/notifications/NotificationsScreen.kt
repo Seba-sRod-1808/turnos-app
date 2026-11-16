@@ -19,7 +19,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.turnos.data.model.MessageTemplate
 import com.example.turnos.data.model.NotificationPref
+import com.example.turnos.data.model.TemplateKind
 import com.example.turnos.di.turnosViewModel
+import com.example.turnos.domain.TemplateRenderer
 import com.example.turnos.ui.components.*
 import com.example.turnos.ui.preview.PreviewData
 import com.example.turnos.ui.theme.*
@@ -27,9 +29,10 @@ import com.example.turnos.ui.theme.*
 @Composable
 fun NotificationsRoute(
     onBack: () -> Unit,
-    viewModel: NotificationsViewModel = turnosViewModel { NotificationsViewModel(settingsRepository) },
+    viewModel: NotificationsViewModel = turnosViewModel { NotificationsViewModel(settingsRepository, appointmentNotifier) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    RequestNotificationPermission()
     val snackbar = remember { SnackbarHostState() }
     UserMessageEffect(state.userMessage, snackbar) { viewModel.onEvent(NotificationsEvent.OnMessageShown) }
 
@@ -153,9 +156,18 @@ private fun TemplateEditorDialog(form: TemplateForm, onEvent: (NotificationsEven
                     form.body, { change(form.copy(body = it)) }, label = { Text("Mensaje") },
                     minLines = 3, colors = turnosFieldColors(), modifier = Modifier.fillMaxWidth(),
                 )
-                Text("Variables: {fecha}, {hora}, {barbero}", style = MaterialTheme.typography.bodySmall, color = InkMuted)
+                Text("Variables: " + TemplateRenderer.VARIABLES.joinToString(", "), style = MaterialTheme.typography.bodySmall, color = InkMuted)
+                if (form.isReminder) {
+                    Text("Enviar", style = MaterialTheme.typography.labelMedium, color = InkSecondary)
+                    SegmentedSelector(
+                        options = REMINDER_TIMINGS.map { it to it },
+                        selected = form.timing,
+                        onSelect = { change(form.copy(timing = it)) },
+                    )
+                }
+                Text("Canal", style = MaterialTheme.typography.labelMedium, color = InkSecondary)
                 SegmentedSelector(
-                    options = listOf("WhatsApp" to "WhatsApp", "SMS" to "SMS"),
+                    options = TEMPLATE_CHANNELS.map { it to it },
                     selected = form.channel,
                     onSelect = { change(form.copy(channel = it)) },
                 )
@@ -190,5 +202,5 @@ private fun NotificationsEmptyPreview() = Host(sample.copy(templates = emptyList
 @Preview(showBackground = true, name = "Notificaciones - editando plantilla")
 @Composable
 private fun NotificationsEditPreview() = Host(
-    sample.copy(form = TemplateForm(2, "Recordatorio de cita", "Te esperamos mañana a las {hora} con {barbero}.", "24 h antes")),
+    sample.copy(form = TemplateForm(2, "Recordatorio de cita", "Te esperamos a las {hora} con {barbero}.", "2 h antes", kind = TemplateKind.REMINDER)),
 )

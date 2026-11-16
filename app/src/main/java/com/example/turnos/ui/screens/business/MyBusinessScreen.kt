@@ -1,6 +1,7 @@
 package com.example.turnos.ui.screens.business
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -15,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -82,6 +84,9 @@ fun MyBusinessScreen(
                     Text(profile.rating.toString(), style = MaterialTheme.typography.titleSmall, color = Ink)
                 }
                 Text(profile.address, style = MaterialTheme.typography.bodySmall, color = InkSecondary)
+                if (profile.phone.isNotBlank()) {
+                    Text("Tel. ${profile.phone}", style = MaterialTheme.typography.bodySmall, color = InkSecondary)
+                }
                 Spacer(Modifier.height(12.dp))
                 SecondaryButton("Editar Perfil", onClick = { onEvent(MyBusinessEvent.OnEditProfileClick) }, modifier = Modifier.fillMaxWidth(), compact = true)
             }
@@ -100,6 +105,41 @@ fun MyBusinessScreen(
             }
         }
     }
+
+    state.profileForm?.let { form -> ProfileDialog(form, onEvent) }
+}
+
+@Composable
+private fun ProfileDialog(form: ProfileForm, onEvent: (MyBusinessEvent) -> Unit) {
+    val change: (ProfileForm) -> Unit = { onEvent(MyBusinessEvent.OnProfileFormChange(it)) }
+    AlertDialog(
+        onDismissRequest = { onEvent(MyBusinessEvent.OnDismissProfile) },
+        containerColor = SurfaceWhite,
+        title = { Text("Editar perfil del local") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    form.name, { change(form.copy(name = it, nameError = null)) },
+                    label = { Text("Nombre del local") }, singleLine = true, isError = form.nameError != null,
+                    supportingText = form.nameError?.let { error -> @Composable { Text(error) } },
+                    colors = turnosFieldColors(), modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    form.address, { change(form.copy(address = it)) },
+                    label = { Text("Dirección") }, colors = turnosFieldColors(), modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    form.phone, { change(form.copy(phone = it, phoneError = null)) },
+                    label = { Text("Teléfono") }, singleLine = true, isError = form.phoneError != null,
+                    supportingText = form.phoneError?.let { error -> @Composable { Text(error) } },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    colors = turnosFieldColors(), modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onEvent(MyBusinessEvent.OnSaveProfile) }) { Text("Guardar", color = TurnosOrange) } },
+        dismissButton = { TextButton(onClick = { onEvent(MyBusinessEvent.OnDismissProfile) }) { Text("Cancelar", color = InkSecondary) } },
+    )
 }
 
 @Composable
@@ -109,6 +149,16 @@ private fun Host(state: MyBusinessState) = TurnosTheme { MyBusinessScreen(state)
 @Composable
 private fun MyBusinessPreview() = Host(
     MyBusinessState(profile = PreviewData.business, appointmentsToday = 8, pending = 3, revenueToday = 1200, isLoading = false),
+)
+
+@Preview(showBackground = true, name = "Mi Local - editar perfil")
+@Composable
+private fun MyBusinessEditPreview() = Host(
+    MyBusinessState(
+        profile = PreviewData.business,
+        isLoading = false,
+        profileForm = ProfileForm("", "5ta Avenida 12-45, Zona 1", "22", nameError = "El nombre es obligatorio", phoneError = "Teléfono inválido"),
+    ),
 )
 
 @Preview(showBackground = true, name = "Mi Local - cargando")

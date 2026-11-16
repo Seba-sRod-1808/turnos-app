@@ -3,11 +3,15 @@ package com.example.turnos.ui.screens.services
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.turnos.data.model.Service
+import com.example.turnos.data.repository.AppointmentRepository
 import com.example.turnos.data.repository.ServiceRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class ServicesViewModel(private val repository: ServiceRepository) : ViewModel() {
+class ServicesViewModel(
+    private val repository: ServiceRepository,
+    private val appointmentRepository: AppointmentRepository,
+) : ViewModel() {
 
     private val _state = MutableStateFlow(ServicesState())
     val state: StateFlow<ServicesState> = _state.asStateFlow()
@@ -64,6 +68,10 @@ class ServicesViewModel(private val repository: ServiceRepository) : ViewModel()
         val form = _state.value.form ?: return
         if (form.isNew) return
         viewModelScope.launch {
+            if (appointmentRepository.hasActiveForService(form.id)) {
+                _state.update { it.copy(userMessage = "Tiene citas pendientes: páusalo en lugar de eliminarlo.") }
+                return@launch
+            }
             repository.delete(form.id)
             _state.update { it.copy(form = null, userMessage = "Servicio eliminado.") }
         }

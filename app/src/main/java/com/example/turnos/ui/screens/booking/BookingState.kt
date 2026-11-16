@@ -1,5 +1,6 @@
 package com.example.turnos.ui.screens.booking
 
+import com.example.turnos.data.model.Barber
 import com.example.turnos.data.model.Service
 import com.example.turnos.data.model.TimeSlot
 import com.example.turnos.util.formatDateLong
@@ -24,7 +25,7 @@ data class DayOption(
 data class BookingState(
     val isLoading: Boolean = true,
     val service: Service? = null,
-    val barberName: String = "",
+    val barber: Barber? = null,
     val businessName: String = "",
     val businessAddress: String = "",
     val days: List<DayOption> = emptyList(),
@@ -40,6 +41,7 @@ data class BookingState(
     /** Aviso sobre los feriados (ej. sin conexión, usando datos guardados). */
     val holidaysNotice: String? = null,
 ) {
+    val barberName: String get() = barber?.name ?: "Por asignar"
     val canConfirm: Boolean get() = selectedSlot != null && !isConfirming && !isConfirmed
     val isEditable: Boolean get() = !isConfirming && !isConfirmed
 

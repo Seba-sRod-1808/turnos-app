@@ -1,5 +1,9 @@
 package com.example.turnos.ui.screens.booking
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,6 +16,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.Directions
+import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.EventBusy
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
@@ -21,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,13 +49,15 @@ fun BookingRoute(
     viewModel: BookingViewModel = turnosViewModel { handle ->
         BookingViewModel(
             handle, serviceRepository, appointmentRepository, availabilityRepository,
-            barberRepository, holidayRepository, sessionRepository, settingsRepository,
+            barberRepository, holidayRepository, sessionRepository, settingsRepository, appointmentAlerts,
         )
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     BookingScreen(state) { event ->
         when (event) {
+            BookingEvent.OnOpenMapsClick -> openInMaps(context, "${state.businessName}, ${state.businessAddress}")
             BookingEvent.OnBackClick -> onBack()
             BookingEvent.OnViewAgendaClick -> onViewAgenda()
             else -> viewModel.onEvent(event)
@@ -106,7 +115,7 @@ fun BookingScreen(state: BookingState, onEvent: (BookingEvent) -> Unit) {
                         Column {
                             Text("Barbero:", style = MaterialTheme.typography.bodySmall, color = InkSecondary)
                             Text(state.barberName, style = MaterialTheme.typography.titleSmall, color = Ink)
-                            RatingStars(5)
+                            RatingStars(state.barber?.rating ?: 0)
                         }
                     }
                     Spacer(Modifier.height(12.dp))
@@ -164,6 +173,14 @@ fun BookingScreen(state: BookingState, onEvent: (BookingEvent) -> Unit) {
                     MapPlaceholder(Modifier.fillMaxWidth().height(140.dp))
                     Spacer(Modifier.height(8.dp))
                     Text("${state.businessName} · ${state.businessAddress}", style = MaterialTheme.typography.bodySmall, color = InkSecondary)
+                    Spacer(Modifier.height(8.dp))
+                    SecondaryButton(
+                        "CÓMO LLEGAR",
+                        icon = Icons.Outlined.Directions,
+                        onClick = { onEvent(BookingEvent.OnOpenMapsClick) },
+                        modifier = Modifier.fillMaxWidth(),
+                        compact = true,
+                    )
                 }
 
                 // ---------- Estado ----------
@@ -282,12 +299,24 @@ private fun SlotGrid(slots: List<TimeSlot>, selected: Int?, enabled: Boolean, on
 }
 
 /**
- * Espacio reservado para el mapa (solo una "sombra").
- * TODO: reemplazar por Google Maps (maps-compose) cuando se integre la API.
+ * Espacio reservado para el mapa embebido (requiere API key de Google Maps).
+ * Mientras tanto, "Cómo llegar" abre la dirección en la app de mapas del teléfono.
  */
 @Composable
 fun MapPlaceholder(modifier: Modifier = Modifier) {
-    Box(modifier.clip(MaterialTheme.shapes.small).background(NeutralSoft))
+    Box(modifier.clip(MaterialTheme.shapes.small).background(NeutralSoft), contentAlignment = Alignment.Center) {
+        Icon(Icons.Outlined.Map, null, tint = InkMuted, modifier = Modifier.size(40.dp))
+    }
+}
+
+private fun openInMaps(context: Context, address: String) {
+    val uri = Uri.parse("geo:0,0?q=" + Uri.encode(address))
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+    } catch (e: ActivityNotFoundException) {
+        val web = Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(address))
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, web)) }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -302,7 +331,7 @@ private val previewDays = (0 until 7).map { i ->
 private val sample = BookingState(
     isLoading = false,
     service = PreviewData.services.first(),
-    barberName = "Alex Rivera",
+    barber = PreviewData.barbers.first(),
     businessName = PreviewData.business.name,
     businessAddress = PreviewData.business.address,
     days = previewDays,

@@ -2,33 +2,54 @@ package com.example.turnos.ui.screens.catalog
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.turnos.data.repository.AppointmentRepository
 import com.example.turnos.data.repository.AuthRepository
 import com.example.turnos.data.repository.ServiceRepository
 import com.example.turnos.data.repository.SessionRepository
 import com.example.turnos.data.repository.SettingsRepository
+import com.example.turnos.util.NetworkMonitor
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CatalogViewModel(
     private val serviceRepository: ServiceRepository,
     private val authRepository: AuthRepository,
+    appointmentRepository: AppointmentRepository,
     session: SessionRepository,
     settings: SettingsRepository,
+    networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(
-        CatalogState(
-            businessName = settings.businessProfile.name,
-            userName = session.currentUser.value?.name.orEmpty(),
-        )
-    )
+    private val _state = MutableStateFlow(CatalogState())
     val state: StateFlow<CatalogState> = _state.asStateFlow()
 
     private var loadJob: Job? = null
 
     init {
         loadServices()
+
+        settings.observeBusinessProfile()
+            .onEach { profile -> _state.update { it.copy(businessName = profile.name) } }
+            .launchIn(viewModelScope)
+
+        networkMonitor.isOnline
+            .onEach { online -> _state.update { it.copy(isOffline = !online) } }
+            .launchIn(viewModelScope)
+
+        session.currentUser
+            .filterNotNull()
+            .onEach { user -> _state.update { it.copy(userName = user.name) } }
+            .flatMapLatest { user -> appointmentRepository.observeForClient(user.id) }
+            .onEach { appointments ->
+                val now = LocalDateTime.now()
+                val next = appointments.filter { it.isActive && !it.hasStarted(now) }.minByOrNull { it.startDateTime }
+                _state.update { it.copy(nextAppointment = next) }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun onEvent(event: CatalogEvent) {
@@ -40,11 +61,10 @@ class CatalogViewModel(
                 authRepository.logout()
                 _state.update { it.copy(isLoggedOut = true) }
             }
-            is CatalogEvent.OnReserveClick, CatalogEvent.OnMyAppointmentsClick -> Unit // navegación
+            is CatalogEvent.OnReserveClick, CatalogEvent.OnMyAppointmentsClick -> Unit
         }
     }
 
-    /** Escucha la tabla de servicios: cualquier cambio del negocio se refleja aquí al instante. */
     private fun loadServices() {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {

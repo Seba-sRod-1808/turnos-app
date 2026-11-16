@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.turnos.data.local.DatabaseSeeder
 import com.example.turnos.data.model.UserRole
 import com.example.turnos.data.repository.AuthRepository
-import com.example.turnos.util.Validators
+import com.example.turnos.data.repository.LoginResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,45 +19,38 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
     fun onEvent(event: LoginEvent) {
         when (event) {
-            is LoginEvent.OnEmailChange ->
-                _state.update { it.copy(email = event.value, emailError = null, errorMessage = null) }
-            is LoginEvent.OnPasswordChange ->
-                _state.update { it.copy(password = event.value, errorMessage = null) }
-            LoginEvent.OnTogglePasswordVisibility ->
-                _state.update { it.copy(passwordVisible = !it.passwordVisible) }
+            is LoginEvent.OnUsernameChange -> _state.update { it.copy(username = event.value, errorMessage = null) }
+            is LoginEvent.OnPasswordChange -> _state.update { it.copy(password = event.value, errorMessage = null) }
+            LoginEvent.OnTogglePasswordVisibility -> _state.update { it.copy(passwordVisible = !it.passwordVisible) }
             is LoginEvent.OnUseDemoAccount -> _state.update {
                 it.copy(
-                    email = if (event.role == UserRole.CLIENT) DatabaseSeeder.DEMO_CLIENT_EMAIL else DatabaseSeeder.DEMO_BUSINESS_EMAIL,
+                    username = if (event.role == UserRole.CLIENT) DatabaseSeeder.DEMO_CLIENT_USERNAME else DatabaseSeeder.DEMO_BUSINESS_USERNAME,
                     password = DatabaseSeeder.DEMO_PASSWORD,
-                    emailError = null,
                     errorMessage = null,
                 )
             }
             LoginEvent.OnLoginClick -> login()
-            LoginEvent.OnForgotPasswordClick, LoginEvent.OnGoogleClick ->
-                _state.update { it.copy(userMessage = "Disponible en una próxima versión.") }
-            LoginEvent.OnMessageShown -> _state.update { it.copy(userMessage = null) }
-            LoginEvent.OnNavigationHandled -> _state.update { it.copy(loggedInRole = null) }
-            LoginEvent.OnCreateAccountClick -> Unit // navegación: la maneja la Route
+            LoginEvent.OnNavigationHandled -> _state.update { it.copy(destination = null) }
+            LoginEvent.OnForgotPasswordClick -> Unit
         }
     }
 
     private fun login() {
         val current = _state.value
-        when {
-            current.email.isBlank() || current.password.isBlank() -> {
-                _state.update { it.copy(errorMessage = "Completa tu correo y contraseña.") }
-                return
-            }
-            !Validators.isValidEmail(current.email) -> {
-                _state.update { it.copy(emailError = "Ingresa un correo válido") }
-                return
-            }
+        if (current.username.isBlank() || current.password.isBlank()) {
+            _state.update { it.copy(errorMessage = "Completa tu usuario y contraseña.") }
+            return
         }
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, errorMessage = null, emailError = null) }
-            authRepository.login(current.email, current.password)
-                .onSuccess { user -> _state.update { it.copy(isLoading = false, password = "", loggedInRole = user.role) } }
+            _state.update { it.copy(isLoading = true, errorMessage = null) }
+            authRepository.login(current.username, current.password)
+                .onSuccess { result ->
+                    val destination = when (result) {
+                        is LoginResult.LoggedIn -> LoginDestination.Home(result.user.role)
+                        is LoginResult.NeedsSetup -> LoginDestination.FirstLoginSetup(result.userId)
+                    }
+                    _state.update { it.copy(isLoading = false, password = "", destination = destination) }
+                }
                 .onFailure { e -> _state.update { it.copy(isLoading = false, errorMessage = e.message) } }
         }
     }

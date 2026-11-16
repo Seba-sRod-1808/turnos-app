@@ -11,6 +11,7 @@ import com.example.turnos.data.model.SlotState
 import com.example.turnos.data.repository.*
 import com.example.turnos.domain.BusinessRules
 import com.example.turnos.navigation.BookingDestination
+import com.example.turnos.notifications.AppointmentAlerts
 import com.example.turnos.util.formatDayChip
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +29,8 @@ class BookingViewModel(
     private val barberRepository: BarberRepository,
     private val holidayRepository: HolidayRepository,
     private val session: SessionRepository,
-    settings: SettingsRepository,
+    private val settings: SettingsRepository,
+    private val alerts: AppointmentAlerts,
 ) : ViewModel() {
 
     /** Argumentos type-safe de la navegación: solo llegan IDs. */
@@ -36,11 +38,7 @@ class BookingViewModel(
     private val rescheduleId: Long? = args.rescheduleAppointmentId.takeIf { it > 0 }
 
     private val _state = MutableStateFlow(
-        BookingState(
-            businessName = settings.businessProfile.name,
-            businessAddress = settings.businessProfile.address,
-            isReschedule = rescheduleId != null,
-        )
+        BookingState(isReschedule = rescheduleId != null)
     )
     val state: StateFlow<BookingState> = _state.asStateFlow()
 
@@ -56,7 +54,7 @@ class BookingViewModel(
             is BookingEvent.OnSelectSlot -> _state.update { it.copy(selectedSlot = event.startMinutes, errorMessage = null) }
             BookingEvent.OnConfirmClick -> confirm()
             BookingEvent.OnDismissError -> _state.update { it.copy(errorMessage = null) }
-            BookingEvent.OnBackClick, BookingEvent.OnViewAgendaClick -> Unit // navegación
+            BookingEvent.OnOpenMapsClick, BookingEvent.OnBackClick, BookingEvent.OnViewAgendaClick -> Unit
         }
     }
 
@@ -67,6 +65,16 @@ class BookingViewModel(
             return@launch
         }
         service = loaded
+
+        val original = rescheduleId?.let { appointmentRepository.getById(it) }
+        if (original != null && !BusinessRules.canReschedule(original)) {
+            _state.update {
+                it.copy(isLoading = false, errorMessage = "Ya no se puede reprogramar: faltan menos de ${BusinessRules.LATE_CANCELLATION_HOURS} horas para la cita.")
+            }
+            return@launch
+        }
+        val barber = original?.let { barberRepository.getById(it.barberId) } ?: barberRepository.firstAvailable()
+        val profile = settings.observeBusinessProfile().first()
 
         // 1) Feriados desde internet (o desde Room si no hay conexión).
         val today = LocalDate.now()
@@ -98,7 +106,9 @@ class BookingViewModel(
             it.copy(
                 isLoading = false,
                 service = loaded,
-                barberName = barberRepository.firstAvailableName(),
+                barber = barber,
+                businessName = profile.name,
+                businessAddress = profile.address,
                 days = days,
                 holidaysNotice = notice,
             )
@@ -157,22 +167,24 @@ class BookingViewModel(
 
             if (rescheduleId != null) {
                 appointmentRepository.reschedule(rescheduleId, date, start)
+                appointmentRepository.getById(rescheduleId)?.let { alerts.onRescheduled(it) }
             } else {
-                appointmentRepository.create(
-                    Appointment(
-                        id = 0,
-                        serviceId = service.id,
-                        serviceName = service.name,
-                        barberName = s.barberName,
-                        clientId = user.id,
-                        clientName = user.name,
-                        date = date,
-                        startMinutes = start,
-                        durationMin = service.durationMin,
-                        price = service.price,
-                        status = AppointmentStatus.CONFIRMED,
-                    )
+                val appointment = Appointment(
+                    id = 0,
+                    serviceId = service.id,
+                    serviceName = service.name,
+                    barberId = s.barber?.id ?: 0,
+                    barberName = s.barberName,
+                    clientId = user.id,
+                    clientName = user.name,
+                    date = date,
+                    startMinutes = start,
+                    durationMin = service.durationMin,
+                    price = service.price,
+                    status = AppointmentStatus.CONFIRMED,
                 )
+                val id = appointmentRepository.create(appointment)
+                alerts.onBooked(appointment.copy(id = id))
             }
             _state.update { it.copy(isConfirming = false, isConfirmed = true) }
         }

@@ -2,16 +2,18 @@ package com.example.turnos.ui.screens.login
 
 import com.example.turnos.data.model.UserRole
 
+sealed interface LoginDestination {
+    data class Home(val role: UserRole) : LoginDestination
+    data class FirstLoginSetup(val userId: Long) : LoginDestination
+}
+
 /** Estado completo de la pantalla de login en un momento dado. */
 data class LoginState(
-    val email: String = "",
+    val username: String = "",
     val password: String = "",
     val passwordVisible: Boolean = false,
     val isLoading: Boolean = false,
-    val emailError: String? = null,
     val errorMessage: String? = null,
-    /** Mensaje temporal (snackbar). */
-    val userMessage: String? = null,
-    /** Cuando no es null, la vista navega al inicio de ese rol. */
-    val loggedInRole: UserRole? = null,
+    /** Cuando no es null, la vista navega y luego avisa con OnNavigationHandled. */
+    val destination: LoginDestination? = null,
 )

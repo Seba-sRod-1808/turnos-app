@@ -10,7 +10,7 @@ import java.time.LocalDate
 object PreviewData {
     private val today: LocalDate = LocalDate.of(2026, 6, 15)
 
-    val business = BusinessProfile("Barbería El Clásico", "5ta Avenida 12-45, Zona 1", 4.5)
+    val business = BusinessProfile("Barbería El Clásico", "5ta Avenida 12-45, Zona 1", "2222-3344", 4.5)
 
     val services = listOf(
         Service(1, "Corte Clásico", "Corte tradicional y lavado", 45, 150),
@@ -27,13 +27,13 @@ object PreviewData {
     )
 
     val upcoming = listOf(
-        Appointment(1, 1, "Corte Clásico", "Alex Rivera", 1, "Ana López", today.plusDays(2), 14 * 60, 45, 150, AppointmentStatus.CONFIRMED),
-        Appointment(2, 2, "Afeitado con Navaja", "Alex Rivera", 1, "Ana López", today.plusDays(7), 10 * 60 + 30, 30, 100, AppointmentStatus.PENDING),
+        Appointment(1, 1, "Corte Clásico", 1, "Alex Rivera", 1, "Ana López", today.plusDays(2), 14 * 60, 45, 150, AppointmentStatus.CONFIRMED),
+        Appointment(2, 2, "Afeitado con Navaja", 1, "Alex Rivera", 1, "Ana López", today.plusDays(7), 10 * 60 + 30, 30, 100, AppointmentStatus.PENDING),
     )
 
     val past = listOf(
-        Appointment(3, 1, "Corte Clásico", "Alex Rivera", 1, "Ana López", today.minusDays(10), 16 * 60, 45, 150, AppointmentStatus.COMPLETED),
-        Appointment(4, 3, "Arreglo de Barba", "Mateo López", 1, "Ana López", today.minusDays(20), 11 * 60, 30, 90, AppointmentStatus.CANCELLED, lateCancellation = true),
+        Appointment(3, 1, "Corte Clásico", 1, "Alex Rivera", 1, "Ana López", today.minusDays(10), 16 * 60, 45, 150, AppointmentStatus.COMPLETED),
+        Appointment(4, 3, "Arreglo de Barba", 2, "Mateo López", 1, "Ana López", today.minusDays(20), 11 * 60, 30, 90, AppointmentStatus.CANCELLED, lateCancellation = true),
     )
 
     val blocks = listOf(TimeBlock(1, 9 * 60, 12 * 60), TimeBlock(2, 14 * 60, 18 * 60))
@@ -68,8 +68,13 @@ object PreviewData {
     )
 
     val templates = listOf(
-        MessageTemplate(1, "Confirmación de cita", "Tu cita en Barbería El Clásico está confirmada para el {fecha}.", "Al reservar", "WhatsApp", true),
-        MessageTemplate(2, "Recordatorio de cita", "Te esperamos mañana a las {hora} con {barbero}.", "24 h antes", "WhatsApp", true),
-        MessageTemplate(3, "Agradecimiento", "Gracias por visitarnos. ¿Cómo fue tu experiencia?", "2 h después", "SMS", false),
+        MessageTemplate(1, "Confirmación de cita", "Tu cita de {servicio} está confirmada para el {fecha} con {barbero}.", "Al reservar", "App", true, TemplateKind.CONFIRMATION),
+        MessageTemplate(2, "Recordatorio de cita", "Te esperamos a las {hora} con {barbero} para tu {servicio}.", "2 h antes", "App", true, TemplateKind.REMINDER),
+        MessageTemplate(3, "Agradecimiento", "Gracias por visitarnos. ¿Cómo fue tu experiencia?", "2 h después", "SMS", false, TemplateKind.FOLLOW_UP),
+    )
+
+    val clients = listOf(
+        User(2, "Ana López", "cliente", UserRole.CLIENT, phone = "5555-0202", hasRecoveryQuestion = true),
+        User(3, "Pedro Castillo", "pedro", UserRole.CLIENT, mustChangePassword = true),
     )
 }

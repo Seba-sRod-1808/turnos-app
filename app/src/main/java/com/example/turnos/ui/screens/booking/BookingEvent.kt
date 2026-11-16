@@ -8,7 +8,8 @@ sealed interface BookingEvent {
     data object OnConfirmClick : BookingEvent
     data object OnDismissError : BookingEvent
 
-    // Solo navegación: los resuelve la Route.
+    // Solo navegación o acciones del sistema: los resuelve la Route.
+    data object OnOpenMapsClick : BookingEvent
     data object OnBackClick : BookingEvent
     data object OnViewAgendaClick : BookingEvent
 }

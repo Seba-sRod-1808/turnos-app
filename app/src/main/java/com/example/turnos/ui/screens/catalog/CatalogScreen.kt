@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Storefront
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.turnos.data.model.Appointment
 import com.example.turnos.data.model.Service
 import com.example.turnos.di.turnosViewModel
 import com.example.turnos.ui.components.*
@@ -35,10 +37,12 @@ fun CatalogRoute(
     onMyAppointments: () -> Unit,
     onLoggedOut: () -> Unit,
     viewModel: CatalogViewModel = turnosViewModel {
-        CatalogViewModel(serviceRepository, authRepository, sessionRepository, settingsRepository)
+        CatalogViewModel(serviceRepository, authRepository, appointmentRepository, sessionRepository, settingsRepository, networkMonitor)
     },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    RequestNotificationPermission()
 
     LaunchedEffect(state.isLoggedOut) { if (state.isLoggedOut) onLoggedOut() }
 
@@ -68,55 +72,84 @@ fun CatalogScreen(state: CatalogState, onEvent: (CatalogEvent) -> Unit) {
         },
     ) { padding ->
         val contentModifier = Modifier.padding(padding).fillMaxSize()
-        when {
-            state.isLoading -> LoadingContent(contentModifier, "Cargando servicios…")
-            state.errorMessage != null -> ErrorContent(state.errorMessage, { onEvent(CatalogEvent.OnRetry) }, contentModifier)
-            else -> LazyColumn(
-                contentModifier,
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                if (state.isSearching) {
-                    item {
-                        OutlinedTextField(
-                            value = state.query,
-                            onValueChange = { onEvent(CatalogEvent.OnQueryChange(it)) },
-                            placeholder = { Text("Buscar servicio") },
-                            leadingIcon = { Icon(Icons.Filled.Search, null) },
-                            singleLine = true,
-                            shape = MaterialTheme.shapes.small,
-                            colors = turnosFieldColors(),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-                item {
-                    Column {
-                        if (state.userName.isNotBlank()) {
-                            Text("Hola, ${state.userName.substringBefore(" ")} 👋", style = MaterialTheme.typography.titleMedium, color = Ink)
-                            Spacer(Modifier.height(4.dp))
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Storefront, null, tint = TurnosOrange, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(state.businessName, style = MaterialTheme.typography.titleSmall, color = InkSecondary)
+        Column(contentModifier) {
+            if (state.isOffline) OfflineBanner()
+            val listModifier = Modifier.weight(1f).fillMaxWidth()
+            when {
+                state.isLoading -> LoadingContent(listModifier, "Cargando servicios…")
+                state.errorMessage != null -> ErrorContent(state.errorMessage, { onEvent(CatalogEvent.OnRetry) }, listModifier)
+                else -> LazyColumn(
+                    listModifier,
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    if (state.isSearching) {
+                        item {
+                            OutlinedTextField(
+                                value = state.query,
+                                onValueChange = { onEvent(CatalogEvent.OnQueryChange(it)) },
+                                placeholder = { Text("Buscar servicio") },
+                                leadingIcon = { Icon(Icons.Filled.Search, null) },
+                                singleLine = true,
+                                shape = MaterialTheme.shapes.small,
+                                colors = turnosFieldColors(),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
                     }
-                }
-                val visible = state.visibleServices
-                items(visible, key = { it.id }) { service ->
-                    ServiceCard(service) { onEvent(CatalogEvent.OnReserveClick(service.id)) }
-                }
-                if (visible.isEmpty()) {
                     item {
-                        if (state.query.isNotBlank()) {
-                            EmptyContent("No encontramos servicios con “${state.query}”.", icon = Icons.Outlined.SearchOff)
-                        } else {
-                            EmptyContent("Este negocio aún no tiene servicios disponibles.")
+                        Column {
+                            if (state.userName.isNotBlank()) {
+                                Text("Hola, ${state.userName.substringBefore(" ")} 👋", style = MaterialTheme.typography.titleMedium, color = Ink)
+                                Spacer(Modifier.height(4.dp))
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.Storefront, null, tint = TurnosOrange, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(state.businessName, style = MaterialTheme.typography.titleSmall, color = InkSecondary)
+                            }
+                        }
+                    }
+                    state.nextAppointment?.let { next ->
+                        item(key = "next-appointment") {
+                            NextAppointmentCard(next) { onEvent(CatalogEvent.OnMyAppointmentsClick) }
+                        }
+                    }
+                    val visible = state.visibleServices
+                    items(visible, key = { it.id }) { service ->
+                        ServiceCard(service) { onEvent(CatalogEvent.OnReserveClick(service.id)) }
+                    }
+                    if (visible.isEmpty()) {
+                        item {
+                            if (state.query.isNotBlank()) {
+                                EmptyContent("No encontramos servicios con “${state.query}”.", icon = Icons.Outlined.SearchOff)
+                            } else {
+                                EmptyContent("Este negocio aún no tiene servicios disponibles.")
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun NextAppointmentCard(appointment: Appointment, onClick: () -> Unit) {
+    TurnosCard(onClick = onClick, padding = 14.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconBadge(Icons.Outlined.EventAvailable)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Tu próxima cita", style = MaterialTheme.typography.labelMedium, color = TurnosOrange)
+                Text(appointment.serviceName, style = MaterialTheme.typography.titleSmall, color = Ink)
+                Text(
+                    "${appointment.dateLabel} · con ${appointment.barberName}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkSecondary,
+                )
+            }
+            AppointmentStatusChip(appointment.status)
         }
     }
 }
@@ -195,6 +228,10 @@ private fun Host(state: CatalogState) = TurnosTheme { CatalogScreen(state) {} }
 @Preview(showBackground = true, name = "Catálogo - con servicios")
 @Composable
 private fun CatalogContentPreview() = Host(sample)
+
+@Preview(showBackground = true, name = "Catálogo - próxima cita sin conexión")
+@Composable
+private fun CatalogOfflinePreview() = Host(sample.copy(isOffline = true, nextAppointment = PreviewData.upcoming.first()))
 
 @Preview(showBackground = true, name = "Catálogo - buscando")
 @Composable

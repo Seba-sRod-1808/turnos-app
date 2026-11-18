@@ -15,7 +15,5 @@ sealed interface ClientsEvent {
     data object OnDismissReset : ClientsEvent
     data object OnCredentialsDismissed : ClientsEvent
     data object OnMessageShown : ClientsEvent
-
-    /** Solo navegación: lo resuelve la Route. */
     data object OnBackClick : ClientsEvent
 }

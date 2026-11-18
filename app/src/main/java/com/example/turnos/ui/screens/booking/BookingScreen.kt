@@ -42,6 +42,12 @@ import com.example.turnos.util.formatDayChip
 import com.example.turnos.util.quetzales
 import java.time.LocalDate
 
+/**
+ * Pantalla de reserva y reprogramación de citas.
+ *
+ * Presenta el sumario del servicio y barbero asignado, el calendario horizontal de disponibilidad
+ * con integración de días feriados, la cuadrícula de horarios libres y el acceso a la ubicación del local.
+ */
 @Composable
 fun BookingRoute(
     onBack: () -> Unit,
@@ -105,7 +111,6 @@ fun BookingScreen(state: BookingState, onEvent: (BookingEvent) -> Unit) {
             ) {
                 state.errorMessage?.let { ErrorBanner(it) }
 
-                // ---------- Sumario ----------
                 TurnosCard {
                     Text("Sumario", style = MaterialTheme.typography.titleSmall, color = Ink)
                     Spacer(Modifier.height(12.dp))
@@ -126,7 +131,6 @@ fun BookingScreen(state: BookingState, onEvent: (BookingEvent) -> Unit) {
                     LabelValue("Fecha", state.dateLabel)
                 }
 
-                // ---------- Fecha y hora ----------
                 TurnosCard {
                     Text("Fecha y hora", style = MaterialTheme.typography.titleSmall, color = Ink)
                     state.holidaysNotice?.let {
@@ -166,7 +170,6 @@ fun BookingScreen(state: BookingState, onEvent: (BookingEvent) -> Unit) {
                     )
                 }
 
-                // ---------- Mapa ----------
                 TurnosCard {
                     Text("Mapa", style = MaterialTheme.typography.titleSmall, color = Ink)
                     Spacer(Modifier.height(12.dp))
@@ -183,7 +186,6 @@ fun BookingScreen(state: BookingState, onEvent: (BookingEvent) -> Unit) {
                     )
                 }
 
-                // ---------- Estado ----------
                 TurnosCard {
                     Text("Estado", style = MaterialTheme.typography.titleSmall, color = Ink)
                     Spacer(Modifier.height(10.dp))
@@ -257,7 +259,6 @@ private fun DayChip(day: DayOption, selected: Boolean, enabled: Boolean, onClick
     }
 }
 
-/** Rejilla de horarios: ocupados y bloqueados se muestran deshabilitados. */
 @Composable
 private fun SlotGrid(slots: List<TimeSlot>, selected: Int?, enabled: Boolean, onSelect: (Int) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -298,10 +299,6 @@ private fun SlotGrid(slots: List<TimeSlot>, selected: Int?, enabled: Boolean, on
     }
 }
 
-/**
- * Espacio reservado para el mapa embebido (requiere API key de Google Maps).
- * Mientras tanto, "Cómo llegar" abre la dirección en la app de mapas del teléfono.
- */
 @Composable
 fun MapPlaceholder(modifier: Modifier = Modifier) {
     Box(modifier.clip(MaterialTheme.shapes.small).background(NeutralSoft), contentAlignment = Alignment.Center) {
@@ -318,10 +315,6 @@ private fun openInMaps(context: Context, address: String) {
         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, web)) }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
 
 private val previewDays = (0 until 7).map { i ->
     val d = LocalDate.of(2026, 9, 14).plusDays(i.toLong())

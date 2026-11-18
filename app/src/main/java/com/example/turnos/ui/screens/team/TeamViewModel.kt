@@ -9,6 +9,12 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+/**
+ * ViewModel para la gestión del equipo de barberos.
+ *
+ * Observa la plantilla del local, registra nuevos integrantes y alterna su estado operativo
+ * (disponible, en servicio o ausente).
+ */
 class TeamViewModel(private val repository: BarberRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(TeamState(dateLabel = formatDateFull(LocalDate.now())))

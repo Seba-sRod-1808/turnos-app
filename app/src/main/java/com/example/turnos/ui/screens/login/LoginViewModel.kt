@@ -12,6 +12,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel de inicio de sesión.
+ *
+ * Gestiona la autenticación de credenciales, el acceso rápido mediante cuentas de demostración
+ * y la redirección hacia la pantalla principal según el rol o al cambio de contraseña temporal.
+ */
 class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
     private val _state = MutableStateFlow(LoginState())

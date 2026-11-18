@@ -10,14 +10,15 @@ import com.example.turnos.util.Validators
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+/**
+ * Repositorio para la administración de cuentas de clientes por parte del dueño del local.
+ *
+ * Permite dar de alta nuevos clientes con una contraseña temporal generada en memoria y
+ * restablecer su acceso exigiendo cambio de contraseña en el siguiente inicio de sesión.
+ */
 class UsernameTakenException : Exception("Ese usuario ya existe. Elige otro.")
 
-/** Credenciales que el dueño entrega al cliente; la contraseña solo existe en memoria aquí. */
 data class ClientCredentials(val name: String, val username: String, val temporaryPassword: String)
-
-/**
- * Cuentas de clientes administradas por el dueño del local.
- */
 
 class ClientRepository(private val userDao: UserDao) {
 
@@ -43,7 +44,6 @@ class ClientRepository(private val userDao: UserDao) {
         }
     }
 
-    /** Recuperación asistida por el local: nueva contraseña temporal y cambio obligatorio al ingresar. */
     suspend fun resetPassword(client: User): ClientCredentials {
         val temporaryPassword = PasswordHasher.generateTemporaryPassword()
         userDao.updatePassword(client.id, PasswordHasher.hash(temporaryPassword), mustChange = true)

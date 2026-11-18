@@ -4,6 +4,9 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/**
+ * Funciones de formateo de fechas, horas (formato de 12 horas) y montos en quetzales (`es-GT`).
+ */
 private val Spanish: Locale = Locale.forLanguageTag("es-GT")
 private val shortDay = DateTimeFormatter.ofPattern("EEE d", Spanish)
 private val longDate = DateTimeFormatter.ofPattern("d 'de' MMMM", Spanish)
@@ -11,8 +14,9 @@ private val fullDate = DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", Spanish)
 private val monthName = DateTimeFormatter.ofPattern("MMMM", Spanish)
 
 fun formatTime(minutes: Int): String {
-    val h = minutes / 60
-    val m = minutes % 60
+    val normalized = Math.floorMod(minutes, 24 * 60)
+    val h = normalized / 60
+    val m = normalized % 60
     val suffix = if (h < 12) "AM" else "PM"
     val h12 = when {
         h == 0 -> 12
@@ -30,7 +34,9 @@ fun formatDateFull(date: LocalDate): String = fullDate.format(date).capitalizeFi
 
 fun formatMonth(date: LocalDate): String = monthName.format(date)
 
-fun quetzales(amount: Int): String = "Q" + String.format(Locale.US, "%,d", amount)
+fun quetzales(amount: Int): String =
+    if (amount < 0) "-Q" + String.format(Locale.US, "%,d", kotlin.math.abs(amount.toLong()))
+    else "Q" + String.format(Locale.US, "%,d", amount)
 
 private fun String.capitalizeFirst(): String =
     replaceFirstChar { if (it.isLowerCase()) it.titlecase(Spanish) else it.toString() }

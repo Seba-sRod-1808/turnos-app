@@ -8,6 +8,12 @@ import com.example.turnos.data.repository.ServiceRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel para la administración de servicios y precios del negocio.
+ *
+ * Permite agregar, editar, pausar o eliminar servicios, impidiendo la eliminación de aquellos
+ * que tienen citas activas pendientes.
+ */
 class ServicesViewModel(
     private val repository: ServiceRepository,
     private val appointmentRepository: AppointmentRepository,

@@ -48,25 +48,29 @@ object BusinessRules {
         now: LocalDateTime = LocalDateTime.now(),
         ignoreAppointmentId: Long? = null,
     ): List<TimeSlot> {
+        if (durationMin <= 0 || date.isBefore(now.toLocalDate())) return emptyList()
         val nowMinutes = if (date == now.toLocalDate()) now.hour * 60 + now.minute else -1
-        if (date.isBefore(now.toLocalDate())) return emptyList()
 
         val active = busy.filter { it.isActive && it.id != ignoreAppointmentId }
-        return blocks.sortedBy { it.startMinutes }.flatMap { block ->
-            (block.startMinutes until block.endMinutes step SLOT_STEP_MIN)
-                .filter { start -> start + durationMin <= block.endMinutes }
-                .filter { start -> start > nowMinutes }
-                .map { start ->
-                    val end = start + durationMin
-                    val state = when {
-                        start in blockedStarts -> SlotState.BLOCKED
-                        blockedStarts.any { it in start until end } -> SlotState.OCCUPIED
-                        active.any { overlaps(start, end, it.startMinutes, it.endMinutes) } -> SlotState.OCCUPIED
-                        else -> SlotState.AVAILABLE
+        return blocks
+            .sortedBy { it.startMinutes }
+            .flatMap { block ->
+                (block.startMinutes until block.endMinutes step SLOT_STEP_MIN)
+                    .filter { start -> start + durationMin <= block.endMinutes }
+                    .filter { start -> start > nowMinutes }
+                    .map { start ->
+                        val end = start + durationMin
+                        val state = when {
+                            start in blockedStarts -> SlotState.BLOCKED
+                            blockedStarts.any { it in start until end } -> SlotState.OCCUPIED
+                            active.any { overlaps(start, end, it.startMinutes, it.endMinutes) } -> SlotState.OCCUPIED
+                            else -> SlotState.AVAILABLE
+                        }
+                        TimeSlot(start, state)
                     }
-                    TimeSlot(start, state)
-                }
-        }
+            }
+            .distinctBy { it.startMinutes }
+            .sortedBy { it.startMinutes }
     }
 
     fun clientHasOverlap(
@@ -89,14 +93,9 @@ object BusinessRules {
     fun canClose(appointment: Appointment, now: LocalDateTime = LocalDateTime.now()): Boolean =
         appointment.isActive && appointment.hasStarted(now)
 
-    /** Lee las horas de anticipación de la plantilla ("2 h antes" -> 2). */
     fun reminderHoursFrom(timing: String): Long =
         reminderHoursRegex.find(timing)?.groupValues?.get(1)?.toLongOrNull() ?: DEFAULT_REMINDER_HOURS
 
-    /**
-     * Si la cita se reservó con menos anticipación que el recordatorio, se avisa 15 min antes;
-     * null si ni eso es posible.
-     */
     fun reminderTime(start: LocalDateTime, hoursBefore: Long, now: LocalDateTime = LocalDateTime.now()): LocalDateTime? {
         val preferred = start.minusHours(hoursBefore)
         if (preferred.isAfter(now)) return preferred

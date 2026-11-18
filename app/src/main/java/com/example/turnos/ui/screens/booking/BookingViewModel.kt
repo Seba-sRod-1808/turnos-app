@@ -21,6 +21,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+/**
+ * ViewModel para la reserva y reprogramación de citas.
+ *
+ * Construye la ventana de días disponibles combinando los días laborables del negocio con los
+ * feriados nacionales, calcula los bloques horarios libres para la duración del servicio y
+ * verifica solapamientos antes de confirmar o reprogramar la cita.
+ */
 class BookingViewModel(
     savedStateHandle: SavedStateHandle,
     private val serviceRepository: ServiceRepository,
@@ -33,7 +40,6 @@ class BookingViewModel(
     private val alerts: AppointmentAlerts,
 ) : ViewModel() {
 
-    /** Argumentos type-safe de la navegación: solo llegan IDs. */
     private val args = savedStateHandle.toRoute<BookingDestination>()
     private val rescheduleId: Long? = args.rescheduleAppointmentId.takeIf { it > 0 }
 
@@ -60,7 +66,7 @@ class BookingViewModel(
 
     private fun load() = viewModelScope.launch {
         val loaded = serviceRepository.getById(args.serviceId)
-        if (loaded == null) {
+        if (loaded == null || (!loaded.active && rescheduleId == null)) {
             _state.update { it.copy(isLoading = false, errorMessage = "El servicio ya no está disponible.") }
             return@launch
         }
@@ -76,7 +82,6 @@ class BookingViewModel(
         val barber = original?.let { barberRepository.getById(it.barberId) } ?: barberRepository.firstAvailable()
         val profile = settings.observeBusinessProfile().first()
 
-        // 1) Feriados desde internet (o desde Room si no hay conexión).
         val today = LocalDate.now()
         val lastDay = today.plusDays(BusinessRules.BOOKING_WINDOW_DAYS.toLong() - 1)
         val holidays = mutableMapOf<LocalDate, String>()
@@ -90,14 +95,13 @@ class BookingViewModel(
                 .onFailure { notice = "No se pudieron consultar los feriados (sin conexión)." }
         }
 
-        // 2) Días laborables configurados por el negocio.
         val workDays = availabilityRepository.getWorkDays()
         val days = (0 until BusinessRules.BOOKING_WINDOW_DAYS).map { offset ->
             val date = today.plusDays(offset.toLong())
             DayOption(
                 date = date,
                 label = formatDayChip(date),
-                isWorkDay = workDays[date.dayOfWeek.value - 1],
+                isWorkDay = workDays.getOrElse(date.dayOfWeek.value - 1) { false },
                 holidayName = holidays[date],
             )
         }
@@ -138,6 +142,7 @@ class BookingViewModel(
 
     private fun confirm() {
         val s = _state.value
+        if (s.isConfirming || s.isConfirmed) return
         val date = s.selectedDate ?: return
         val start = s.selectedSlot ?: return
         val service = service ?: return
@@ -146,10 +151,8 @@ class BookingViewModel(
             return
         }
 
+        _state.update { it.copy(isConfirming = true, errorMessage = null) }
         viewModelScope.launch {
-            _state.update { it.copy(isConfirming = true, errorMessage = null) }
-
-            // Regla: el horario sigue libre (alguien pudo reservarlo mientras tanto).
             val fresh = computeSlots(date)
             if (fresh.none { it.startMinutes == start && it.state == SlotState.AVAILABLE }) {
                 _state.update {
@@ -158,7 +161,6 @@ class BookingViewModel(
                 return@launch
             }
 
-            // Regla: el cliente no puede tener dos citas que se traslapen.
             val mine = appointmentRepository.observeForClient(user.id).first()
             if (BusinessRules.clientHasOverlap(mine, date, start, service.durationMin, ignoreAppointmentId = rescheduleId)) {
                 _state.update { it.copy(isConfirming = false, errorMessage = "Ya tienes otra cita a esa hora.") }

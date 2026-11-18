@@ -17,7 +17,7 @@ data class ServiceForm(
 ) {
     val isNew: Boolean get() = id == 0L
     val isValid: Boolean
-        get() = name.isNotBlank() && (duration.toIntOrNull() ?: 0) in 5..480 && price.toIntOrNull() != null
+        get() = name.isNotBlank() && (duration.toIntOrNull() ?: 0) in 5..480 && (price.toIntOrNull() ?: 0) > 0
 }
 
 data class ServicesState(

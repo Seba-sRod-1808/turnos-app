@@ -20,7 +20,6 @@ object PasswordHasher {
 
     fun hashAnswer(answer: String): String = hash(Validators.normalizeAnswer(answer))
 
-    /** Sin caracteres ambiguos (0/o, 1/l/i) para que el dueño pueda dictarla al cliente. */
     fun generateTemporaryPassword(): String =
         (1..TEMP_PASSWORD_LENGTH).map { TEMP_ALPHABET[random.nextInt(TEMP_ALPHABET.length)] }.joinToString("")
 }

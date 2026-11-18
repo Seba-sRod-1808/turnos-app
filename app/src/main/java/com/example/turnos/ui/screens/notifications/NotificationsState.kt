@@ -20,7 +20,31 @@ data class TemplateForm(
 ) {
     val isReminder: Boolean get() = kind == TemplateKind.REMINDER
     val isNew: Boolean get() = id == 0L
-    val isValid: Boolean get() = title.isNotBlank() && body.isNotBlank()
+    val isValid: Boolean
+        get() = title.isNotBlank() && body.isNotBlank() && timing.isNotBlank() && hasBalancedPlaceholders(body)
+
+    private fun hasBalancedPlaceholders(text: String): Boolean {
+        var depth = 0
+        var tokenLength = 0
+        for (ch in text) {
+            when (ch) {
+                '{' -> {
+                    if (depth > 0) return false
+                    depth = 1
+                    tokenLength = 0
+                }
+                '}' -> {
+                    if (depth != 1 || tokenLength == 0) return false
+                    depth = 0
+                }
+                else -> if (depth == 1) {
+                    if (!ch.isLetterOrDigit() && ch != '_') return false
+                    tokenLength++
+                }
+            }
+        }
+        return depth == 0
+    }
 }
 
 data class NotificationsState(

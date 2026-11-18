@@ -64,7 +64,8 @@ data class Appointment(
     val status: AppointmentStatus,
     val lateCancellation: Boolean = false,
 ) {
-    val startDateTime: LocalDateTime get() = date.atTime(LocalTime.of(startMinutes / 60, startMinutes % 60))
+    val startDateTime: LocalDateTime
+        get() = date.atStartOfDay().plusMinutes(startMinutes.coerceIn(0, 23 * 60 + 59).toLong())
     val endMinutes: Int get() = startMinutes + durationMin
     val dateLabel: String get() = "${formatDateLong(date)}, ${formatTime(startMinutes)}"
 

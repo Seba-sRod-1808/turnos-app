@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCut
@@ -24,6 +25,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.turnos.ui.theme.*
 
+/**
+ * Controles de entrada y selección para formularios (campos de texto etiquetados,
+ * campos de contraseña con alternancia de visibilidad, selectores segmentados y botones con carga).
+ */
 @Composable
 fun BrandMark(modifier: Modifier = Modifier, size: Int = 112) {
     Box(
@@ -50,6 +55,7 @@ fun LabeledTextField(
     trailingIcon: ImageVector? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction = ImeAction.Next,
+    onImeAction: (() -> Unit)? = null,
 ) {
     Column(modifier) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = InkSecondary, modifier = Modifier.padding(bottom = 6.dp))
@@ -67,6 +73,9 @@ fun LabeledTextField(
             enabled = enabled,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+            keyboardActions = if (onImeAction != null) {
+                KeyboardActions(onDone = { onImeAction() }, onNext = { onImeAction() }, onGo = { onImeAction() }, onSend = { onImeAction() })
+            } else KeyboardActions.Default,
             shape = MaterialTheme.shapes.small,
             colors = turnosFieldColors(),
             modifier = Modifier.fillMaxWidth(),
@@ -85,6 +94,7 @@ fun PasswordField(
     error: String? = null,
     enabled: Boolean = true,
     imeAction: ImeAction = ImeAction.Done,
+    onImeAction: (() -> Unit)? = null,
 ) {
     Column(modifier) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = InkSecondary, modifier = Modifier.padding(bottom = 6.dp))
@@ -109,6 +119,9 @@ fun PasswordField(
                 }
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = imeAction),
+            keyboardActions = if (onImeAction != null) {
+                KeyboardActions(onDone = { onImeAction() }, onNext = { onImeAction() }, onGo = { onImeAction() })
+            } else KeyboardActions.Default,
             shape = MaterialTheme.shapes.small,
             colors = turnosFieldColors(),
             modifier = Modifier.fillMaxWidth(),

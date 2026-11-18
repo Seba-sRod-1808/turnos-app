@@ -4,13 +4,13 @@ import com.example.turnos.data.model.User
 import com.example.turnos.data.model.UserRole
 import kotlinx.serialization.Serializable
 
-/*
- * Navegación type-safe: cada destino es un objeto/clase @Serializable.
- * Entre pantallas solo viajan IDs; cada ViewModel carga el resto desde Room.
- * En la reserva, rescheduleAppointmentId = -1 significa reserva nueva.
- * En el historial, barberId = -1 muestra todas las citas; otro valor, la agenda de ese barbero.
+/**
+ * Destinos serializables para la navegación con seguridad de tipos.
+ *
+ * Entre pantallas solo se transfieren identificadores primitivos; cada ViewModel consulta el
+ * estado completo desde Room. En `BookingDestination`, `rescheduleAppointmentId = -1L` indica
+ * una cita nueva; en `HistoryDestination`, `barberId = -1L` muestra la agenda general.
  */
-
 @Serializable data object AuthGraph
 @Serializable data object ClientGraph
 @Serializable data object BusinessGraph
@@ -41,5 +41,4 @@ import kotlinx.serialization.Serializable
 
 fun homeGraphFor(role: UserRole): Any = if (role == UserRole.BUSINESS) BusinessGraph else ClientGraph
 
-/** Con sesión guardada se abre directamente el inicio de su rol. */
 fun startDestinationFor(user: User?): Any = user?.let { homeGraphFor(it.role) } ?: AuthGraph

@@ -11,6 +11,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.example.turnos.ui.theme.*
 
+/**
+ * Variantes de botones reutilizables del sistema de diseño (primario, secundario y neutro).
+ */
 @Composable
 fun PrimaryButton(
     text: String,

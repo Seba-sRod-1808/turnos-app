@@ -8,7 +8,5 @@ sealed interface SetupAccountEvent {
     data class OnAnswerChange(val value: String) : SetupAccountEvent
     data object OnSaveClick : SetupAccountEvent
     data object OnNavigationHandled : SetupAccountEvent
-
-    /** Solo navegación: lo resuelve la Route. */
     data object OnCancelClick : SetupAccountEvent
 }

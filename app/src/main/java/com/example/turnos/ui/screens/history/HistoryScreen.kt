@@ -29,6 +29,12 @@ import com.example.turnos.ui.screens.catalog.ClientTab
 import com.example.turnos.ui.theme.*
 import com.example.turnos.util.quetzales
 
+/**
+ * Pantalla de historial de citas para clientes y administradores del negocio.
+ *
+ * Permite al cliente cancelar o reprogramar sus citas activas, y al negocio confirmar citas
+ * pendientes o cerrar citas iniciadas marcándolas como completadas o no presentes.
+ */
 @Composable
 fun HistoryRoute(
     onBack: () -> Unit,
@@ -60,11 +66,6 @@ fun HistoryRoute(
     }
 }
 
-/**
- * Historial de citas para ambos roles:
- * - Cliente: cancelar o reprogramar.
- * - Negocio: confirmar, marcar completada o no presente.
- */
 @Composable
 fun HistoryScreen(
     state: HistoryState,
@@ -230,10 +231,6 @@ private fun AppointmentCard(
 private fun Overline(text: String, modifier: Modifier = Modifier) {
     Text(text.uppercase(), style = MaterialTheme.typography.labelMedium, color = InkSecondary, modifier = modifier)
 }
-
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
 
 private val sample = HistoryState(isLoading = false, upcoming = PreviewData.upcoming, past = PreviewData.past)
 

@@ -7,7 +7,6 @@ data class NewClientForm(
     val name: String = "",
     val username: String = "",
     val phone: String = "",
-    /** Mientras el dueño no edite el usuario a mano, se sugiere a partir del nombre. */
     val usernameEdited: Boolean = false,
     val nameError: String? = null,
     val usernameError: String? = null,
@@ -21,7 +20,6 @@ data class ClientsState(
     val form: NewClientForm? = null,
     val isSaving: Boolean = false,
     val clientToReset: User? = null,
-    /** Credenciales recién generadas para entregar al cliente; se muestran una sola vez. */
     val credentials: ClientCredentials? = null,
     val userMessage: String? = null,
 ) {

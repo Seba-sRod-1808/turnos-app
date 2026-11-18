@@ -16,6 +16,5 @@ data class SetupAccountState(
     val answerError: String? = null,
     val errorMessage: String? = null,
     val isSaving: Boolean = false,
-    /** Cuando no es null, la cuenta quedó lista y la vista navega al inicio de ese rol. */
     val completedRole: UserRole? = null,
 )

@@ -7,7 +7,6 @@ data class CatalogState(
     val businessName: String = "",
     val userName: String = "",
     val services: List<Service> = emptyList(),
-    /** Se lee de Room, así que sigue visible sin conexión (modo de consulta offline). */
     val nextAppointment: Appointment? = null,
     val isOffline: Boolean = false,
     val isSearching: Boolean = false,

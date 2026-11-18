@@ -17,8 +17,6 @@ sealed interface HistoryEvent {
 
     data object OnMessageShown : HistoryEvent
     data object OnLogoutClick : HistoryEvent
-
-    // Solo navegación: los resuelve la Route.
     data object OnBackClick : HistoryEvent
     data object OnGoToCatalog : HistoryEvent
 }

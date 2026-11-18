@@ -28,6 +28,12 @@ import com.example.turnos.data.model.AppointmentStatus
 import com.example.turnos.data.model.BarberStatus
 import com.example.turnos.ui.theme.*
 
+/**
+ * Componentes visuales transversales del sistema de diseño de Turnos.
+ *
+ * Incluye tarjetas base, encabezados de sección, etiquetas de estado para citas y barberos,
+ * indicadores estadísticos, avatares con iniciales, calificación por estrellas y filas de navegación.
+ */
 @Composable
 fun TurnosCard(
     modifier: Modifier = Modifier,
@@ -129,7 +135,14 @@ fun StatCard(label: String, value: String, modifier: Modifier = Modifier, valueC
 
 @Composable
 fun Avatar(name: String, size: Dp = 44.dp) {
-    val initials = name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
+    val initials = name.split(" ")
+        .filter { it.isNotBlank() }
+        .take(2)
+        .joinToString("") { word ->
+            val cp = word.codePointAt(0)
+            String(Character.toChars(cp)).uppercase()
+        }
+        .ifEmpty { "?" }
     Box(
         Modifier
             .size(size)

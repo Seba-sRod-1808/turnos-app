@@ -31,6 +31,12 @@ import com.example.turnos.ui.preview.PreviewData
 import com.example.turnos.ui.theme.*
 import com.example.turnos.util.quetzales
 
+/**
+ * Pantalla del catálogo de servicios para el cliente.
+ *
+ * Muestra la tarjeta de próxima cita, el listado de servicios activos con filtro de búsqueda
+ * y un indicador cuando el dispositivo consulta datos guardados sin conexión.
+ */
 @Composable
 fun CatalogRoute(
     onReserve: (serviceId: Long) -> Unit,
@@ -100,7 +106,7 @@ fun CatalogScreen(state: CatalogState, onEvent: (CatalogEvent) -> Unit) {
                     item {
                         Column {
                             if (state.userName.isNotBlank()) {
-                                Text("Hola, ${state.userName.substringBefore(" ")} 👋", style = MaterialTheme.typography.titleMedium, color = Ink)
+                                Text("Hola, ${state.userName.substringBefore(" ")}", style = MaterialTheme.typography.titleMedium, color = Ink)
                                 Spacer(Modifier.height(4.dp))
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -180,7 +186,6 @@ private fun ServiceCard(service: Service, onReserve: () -> Unit) {
 
 enum class ClientTab { SERVICES, APPOINTMENTS }
 
-/** Navegación inferior del cliente (compartida con Historial). */
 @Composable
 fun ClientBottomBar(
     selected: ClientTab,
@@ -210,10 +215,6 @@ fun ClientBottomBar(
         )
     }
 }
-
-// ---------------------------------------------------------------------------
-// Previews
-// ---------------------------------------------------------------------------
 
 private val sample = CatalogState(
     businessName = PreviewData.business.name,

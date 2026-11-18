@@ -109,7 +109,6 @@ class HistoryViewModel(
         }
     }
 
-    /** Cancelar con menos de 2 h de anticipación queda marcado como cancelación tardía. */
     private fun cancelSelected() {
         val appointment = _state.value.appointmentToCancel ?: return
         viewModelScope.launch {

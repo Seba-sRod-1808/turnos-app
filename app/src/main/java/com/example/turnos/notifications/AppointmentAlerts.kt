@@ -19,12 +19,10 @@ import java.time.LocalDateTime
  */
 
 class AppointmentAlerts(
-    context: Context,
+    private val context: Context,
     private val notifier: AppointmentNotifier,
     private val settings: SettingsRepository,
 ) {
-    private val workManager by lazy { WorkManager.getInstance(context) }
-
     suspend fun onBooked(appointment: Appointment) {
         notifier.notifyConfirmed(appointment)
         scheduleReminder(appointment)
@@ -33,7 +31,7 @@ class AppointmentAlerts(
     suspend fun onRescheduled(appointment: Appointment) = onBooked(appointment)
 
     fun onClosed(appointmentId: Long) {
-        workManager.cancelUniqueWork(workName(appointmentId))
+        runCatching { WorkManager.getInstance(context).cancelUniqueWork(workName(appointmentId)) }
     }
 
     private suspend fun scheduleReminder(appointment: Appointment) {
@@ -50,7 +48,9 @@ class AppointmentAlerts(
             .setInitialDelay(Duration.between(now, remindAt))
             .setInputData(workDataOf(ReminderWorker.KEY_APPOINTMENT_ID to appointment.id))
             .build()
-        workManager.enqueueUniqueWork(workName(appointment.id), ExistingWorkPolicy.REPLACE, request)
+        runCatching {
+            WorkManager.getInstance(context).enqueueUniqueWork(workName(appointment.id), ExistingWorkPolicy.REPLACE, request)
+        }
     }
 
     private fun workName(appointmentId: Long) = "reminder-$appointmentId"

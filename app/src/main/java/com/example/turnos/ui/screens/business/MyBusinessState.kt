@@ -31,7 +31,6 @@ data class MyBusinessState(
     val pending: Int = 0,
     val revenueToday: Int = 0,
     val sections: List<AdminSection> = AdminSection.entries,
-    /** Formulario de "Editar Perfil"; null = diálogo cerrado. */
     val profileForm: ProfileForm? = null,
     val isLoading: Boolean = true,
     val userMessage: String? = null,

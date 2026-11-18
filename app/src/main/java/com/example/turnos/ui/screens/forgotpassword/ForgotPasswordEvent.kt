@@ -8,7 +8,5 @@ sealed interface ForgotPasswordEvent {
     data object OnTogglePasswordVisibility : ForgotPasswordEvent
     data object OnContinueClick : ForgotPasswordEvent
     data object OnStepBackClick : ForgotPasswordEvent
-
-    /** Solo navegación: lo resuelve la Route. */
     data object OnBackToLoginClick : ForgotPasswordEvent
 }

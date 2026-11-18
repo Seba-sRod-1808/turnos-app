@@ -2,12 +2,12 @@ package com.example.turnos.ui.screens.booking
 
 import com.example.turnos.data.model.Barber
 import com.example.turnos.data.model.Service
+import com.example.turnos.data.model.SlotState
 import com.example.turnos.data.model.TimeSlot
 import com.example.turnos.util.formatDateLong
 import com.example.turnos.util.formatTime
 import java.time.LocalDate
 
-/** Un día que el cliente puede elegir en el calendario horizontal. */
 data class DayOption(
     val date: LocalDate,
     val label: String,
@@ -33,16 +33,19 @@ data class BookingState(
     val slots: List<TimeSlot> = emptyList(),
     val isLoadingSlots: Boolean = false,
     val selectedSlot: Int? = null,
-    /** true si se está reprogramando una cita existente. */
     val isReschedule: Boolean = false,
     val isConfirming: Boolean = false,
     val isConfirmed: Boolean = false,
     val errorMessage: String? = null,
-    /** Aviso sobre los feriados (ej. sin conexión, usando datos guardados). */
     val holidaysNotice: String? = null,
 ) {
     val barberName: String get() = barber?.name ?: "Por asignar"
-    val canConfirm: Boolean get() = selectedSlot != null && !isConfirming && !isConfirmed
+    val canConfirm: Boolean
+        get() = selectedSlot != null &&
+            selectedDay?.isOpen == true &&
+            slots.any { it.startMinutes == selectedSlot && it.state == SlotState.AVAILABLE } &&
+            !isConfirming &&
+            !isConfirmed
     val isEditable: Boolean get() = !isConfirming && !isConfirmed
 
     val dateLabel: String

@@ -8,6 +8,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 
+/**
+ * Repositorio de citas sobre Room.
+ *
+ * Expone flujos reactivos por cliente, barbero o agenda general, además de operaciones
+ * para crear, reprogramar y actualizar el estado de cada cita.
+ */
 class AppointmentRepository(private val dao: AppointmentDao) {
 
     fun observeAll(): Flow<List<Appointment>> = dao.observeAll().map { list -> list.map { it.toModel() } }

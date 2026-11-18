@@ -98,6 +98,7 @@ fun LoginScreen(state: LoginState, onEvent: (LoginEvent) -> Unit) {
                 onToggleVisibility = { onEvent(LoginEvent.OnTogglePasswordVisibility) },
                 enabled = !state.isLoading,
                 imeAction = ImeAction.Done,
+                onImeAction = { onEvent(LoginEvent.OnLoginClick) },
             )
             Spacer(Modifier.height(20.dp))
 

@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 
+/**
+ * ViewModel del catálogo de servicios del cliente.
+ *
+ * Observa los servicios activos, el perfil del negocio, el estado de red y la próxima cita
+ * activa del usuario en sesión para mantener actualizada la vista incluso sin conexión.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CatalogViewModel(
     private val serviceRepository: ServiceRepository,

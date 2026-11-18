@@ -40,7 +40,6 @@ class AuthRepository(
 
     suspend fun getUserName(userId: Long): String? = userDao.getById(userId)?.name
 
-    /** Primer ingreso: reemplaza la contraseña temporal y registra la pregunta de recuperación. */
     suspend fun completeSetup(userId: Long, newPassword: String, question: String, answer: String): Result<User> {
         userDao.getById(userId) ?: return Result.failure(UserNotFoundException())
         userDao.updatePassword(userId, PasswordHasher.hash(newPassword), mustChange = false)
@@ -64,7 +63,6 @@ class AuthRepository(
         else Result.failure(WrongSecurityAnswerException())
     }
 
-    /** Se vuelve a validar la respuesta para que el cambio no dependa solo del estado de la pantalla. */
     suspend fun resetPasswordWithAnswer(username: String, answer: String, newPassword: String): Result<Unit> {
         verifySecurityAnswer(username, answer).onFailure { return Result.failure(it) }
         val entity = userDao.findByUsername(Validators.normalizeUsername(username))!!

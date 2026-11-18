@@ -15,13 +15,13 @@ object Validators {
 
     fun isValidUsername(username: String): Boolean = usernameRegex.matches(normalizeUsername(username))
 
-    fun isValidPassword(password: String): Boolean = password.length >= MIN_PASSWORD_LENGTH
+    fun isValidPassword(password: String): Boolean = password.trim().length >= MIN_PASSWORD_LENGTH
 
-    fun isValidPhone(phone: String): Boolean = phone.isBlank() || phoneRegex.matches(phone.trim())
+    fun isValidPhone(phone: String): Boolean =
+        phone.isBlank() || (phoneRegex.matches(phone.trim()) && phone.count { it.isDigit() } >= 8)
 
     fun isValidSecurityAnswer(answer: String): Boolean = normalizeAnswer(answer).length >= MIN_ANSWER_LENGTH
 
-    /** Las respuestas de seguridad se comparan sin importar mayúsculas, tildes ni espacios extra. */
     fun normalizeAnswer(answer: String): String =
         java.text.Normalizer.normalize(answer.trim().lowercase(), java.text.Normalizer.Form.NFD)
             .replace(Regex("\\p{Mn}+"), "")

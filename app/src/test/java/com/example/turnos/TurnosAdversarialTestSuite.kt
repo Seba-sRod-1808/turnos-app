@@ -265,6 +265,11 @@ class TurnosAdversarialTestSuite {
         advanceUntilIdle()
 
         val beforeCount = db.appointmentDao().observeAll().first().size
+        vm.state.value.days.first { day ->
+            vm.onEvent(BookingEvent.OnSelectDay(day.date))
+            advanceUntilIdle()
+            vm.state.value.slots.any { it.state == SlotState.AVAILABLE }
+        }
         val firstAvailableSlot = vm.state.value.slots.first { it.state == SlotState.AVAILABLE }.startMinutes
         vm.onEvent(BookingEvent.OnSelectSlot(firstAvailableSlot))
 
